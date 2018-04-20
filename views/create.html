@@ -1,0 +1,54 @@
+<html>
+    <head>
+        <title>Tulpagraphy - Create Map</title>
+        <link rel="stylesheet" href="/content/style.css">
+        <script src="/node_modules/jquery/dist/jquery.min.js"></script>
+        <script src="/node_modules/underscore/underscore-min.js"></script>
+        <script src="/node_modules/knockout/build/output/knockout-latest.js"></script>
+        <script src="/scripts/tulpagraphy.core.js"></script>
+        <script src="/view-models/create-map.js"></script>
+        <script src="/scripts/page-models.js"></script>
+        <script src="/scripts/entity-models.js"></script>
+        <nav>
+            <ul id="menu">
+                <li><a href="/">Tulpagraphy</a></li>
+                <li><a href="/views/create.html">New Map</a></li>
+                <li><a href="/views/maps.html">Load Map</a></li>
+            </ul>
+        </nav>
+    </head>
+    <body>
+        <h2>Create New Map</h2>
+            <form class="create-map-form">
+                    <div>
+                        <label for="title">Title: </label>
+                        <input name="title" class="long" data-bind="value: title" />
+                    </div>
+                    <div>
+                        <input name="height" type="number" data-bind="value: height.tileCount, attr: { max: height.max, min: height.min }" />
+                        <label for="height">
+                            <span> tiles high. (</span>
+                            <span style="font-weight:bold;" data-bind="text: height.pixelSize"></span>
+                            <span>pixels )</span>
+                        </label>
+                    </div>
+                    <div>
+                        <input name="width" type="number" data-bind="value: width.tileCount, attr: { max: width.max, min: width.min }" />
+                        <label for="width">
+                            <span> tiles wide. (</span>
+                            <span style="font-weight:bold;" data-bind="text: width.pixelSize"></span>
+                            <span>pixels )</span>
+                        </label>
+                    </div>
+                    <div>
+                        <label for="terrain">Default Terrain: </label>
+                        <select name="terrain" data-bind="options: terrains, optionsText: 'name', value: defaultTerrain" ></select>
+                    </div>
+                    <div>
+                        <label for="embellishment">Default Embellishment: </label>
+                        <select name="terrain" data-bind="options: embellishments, optionsText: 'name', value: defaultEmbellishment, optionsCaption: 'None'" ></select>
+                    </div>
+                <input style="float: right;" type="button" value="Create!" data-bind="click: create" />
+            </form>
+    </body>
+</html>

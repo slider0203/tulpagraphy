@@ -1,0 +1,351 @@
+html, body, .page, #main /*.page and #main included because of the mvc style*/
+{
+    height: 100%;
+}
+
+#tulpagraphy
+{
+    height: 90%;
+    position: relative;
+}
+
+#controls
+{
+    height: 50px;
+}
+
+#controls #grid-opacity-slider
+{
+	border: 2px solid steelblue;
+	background: aliceblue;
+	border-radius: 2px;
+	width: 150px;
+	display:inline-block;
+}
+
+#controls #grid-opacity-slider .ui-slider-handle
+{
+	border-top: 2px solid rgba(3, 156, 202, .5);
+	border-left: 2px solid rgba(3, 156, 202, .5);
+	border-right: 2px solid rgba(2, 100, 129, .5);
+	border-bottom: 2px solid rgba(2, 100, 129, .5);
+	border-radius: 2px;
+	background: rgb(4, 134, 173);
+}
+
+#controls #scale-slider
+{
+	border: 2px solid steelblue;
+	background: aliceblue;
+	border-radius: 2px;
+	width: 150px;
+	display:inline-block;
+}
+
+#controls #scale-slider .ui-slider-handle
+{
+	border: 2px solid rgb(4, 134, 173);
+	border-radius: 2px;
+	background: rgba(4, 134, 173, .5);
+}
+
+
+/* Map Styles */
+#map 
+{
+    position: absolute;
+    top: 52px; /* 30 plus 2*2 for the border */
+    width: 85%;
+    bottom: 0;
+    left: 0;
+    right: 252px;
+	overflow:auto;
+}
+
+#map .map-container .map
+{
+	position: relative;
+}
+
+#map .map-container .map > * {
+	position: absolute;
+    width:100%;
+    height:100%;
+}
+
+.map > .selection-layer > .active-tiles > polygon
+{
+	fill: white;
+	fill-opacity: 0;
+	stroke: black;
+	stroke-width: 1px;
+}
+
+.map > .selection-layer > .active-tiles > polygon:hover {
+	fill-opacity: .5;
+}
+
+#map > .selection-layer > .active-tiles > polygon
+{
+	fill: white;
+	fill-opacity: 0;
+	stroke: black;
+	stroke-width: 1px;
+}
+
+#map > .selection-layer > .active-tiles > polygon:hover {
+	fill-opacity: .5;
+}
+
+/* Toolbar, tool-set and tools */
+#toolbar 
+{
+    overflow: auto;
+    position: absolute;
+    top: 52px; /* 30 plus 2*2 for the border */
+    width: 14%;
+    bottom: 0;
+    right: 0;
+}
+
+.hidden
+{
+	display: none;
+	visibility: hidden;
+}
+
+.no-decoration
+{
+	text-decoration: none !important;
+}
+
+.center
+{
+	text-align: center;
+}
+
+.no-space
+{
+	margin-top:0;
+	margin-bottom:0;
+	padding-top: 0;
+	padding-bottom:0;
+}
+
+.tool-set a {
+    width: 98%;
+	background: aliceBlue;
+    display: inline-block;
+	color: #333;
+	box-sizing: border-box;
+	font-weight: bold;
+	text-align: center;
+	padding: .25em;
+	text-decoration: none;
+	border: 1px solid steelBlue;
+	-webkit-border-radius: 4px;
+	-moz-border-radius: 4px;
+	border-radius: 4px;
+	text-align: center;
+}
+
+.tool-set > .tools
+{
+	padding-top:.3em;
+}
+
+.tool-set > .tools > ul
+{
+	margin:0;
+	padding:0;
+	list-style: none;
+}
+
+.tool-set > .tools li
+{
+	float: left;
+	width:60px;
+	margin: 2px;
+	text-align:center;
+	box-sizing:border-box;
+	border: 1px solid transparent;
+	height: 100px;
+    padding: 2px;
+}
+
+.tool-set > .tools li img
+{
+    width: 50px;
+    height: 50px;
+}
+
+.tool-set > .tools li.selected
+{
+	background: aliceblue;
+	border-color: steelblue;
+		-webkit-border-radius: 4px;
+	-moz-border-radius: 4px;
+	border-radius: 4px;
+}
+
+.tool-set > .tools li h4
+{
+	margin: 0;
+}
+
+/* Loading Styles */
+.loading-section
+{
+	position:absolute;
+	top:48%;
+	display:none;
+	width: 100%;
+	text-align:center;
+}
+
+.loading-image
+{
+	/* background: url(images/ajax_loader.gif) no-repeat center; */
+	background-size:contain;
+	height: 4em;
+	width: 100%;
+}
+
+.loading-blocker
+{
+	background: black;
+	opacity:.8;
+	position:absolute;
+	top:0;
+	bottom:0;
+	left:0;
+	right:0;
+	display:none;
+}
+
+.loading-section .message
+{
+	width: 100%;
+	text-align: center;
+}
+
+.loading .loading-blocker, .loading .loading-section
+{
+	display:block;
+}
+
+/* Print Preview Model Styles */
+.export-image-viewport
+{
+	position: fixed;
+	top: 0;
+	right: 0;
+	left: 0;
+	bottom: 0;
+	background: rgba(0, 0, 0, .6);
+	z-index: 1000;
+}
+
+.export-image-viewport .view
+{
+	height: 100%;
+	width: 100%;
+	overflow: hidden;
+	padding: 2em;
+	box-sizing: border-box;
+	background: #EEE;
+	background-clip: content-box;
+}
+
+.export-image-viewport .view > div
+{
+	height: 100%;
+	width: 100%;
+}
+
+.export-image-viewport .image-container
+{
+	background-clip: content-box;
+	padding-bottom: 3em;
+	height: 100%;
+	width: 100%;
+	box-sizing: border-box;
+	text-align: center;
+	position: relative;
+}
+
+.export-image-viewport .image-canvas
+{
+	background:white;
+	border:1px solid #222;
+	max-height: 100%;
+	max-width: 100%;
+	padding: .5em;
+	box-sizing: border-box;
+}
+
+.export-image-viewport > div
+{
+	display: inline-block;
+	height: 100%;
+	width: 100%;
+}
+
+.export-image-viewport .actions
+{
+	height: 3em;
+	position: absolute;
+	bottom: 2em;
+	right: 3em;
+	left: 3em;
+	list-style: none;
+	padding: 0;
+	margin: 0;
+}
+
+.export-image-viewport .actions li
+{
+	float:right;
+	margin:.5em;
+	min-width:100px;
+}
+
+.export-image-viewport .view .working-indicator
+{
+	height: 6em;
+	width: 6em;
+	/* background: url("Images/ajax_loader.gif"); */
+	background-size: contain;
+	position: fixed;
+	top: 40%;
+	right: 48%;
+	display: none;
+}
+
+.export-image-viewport .view .working-indicator.show 
+{
+	display: block;
+}
+
+/* Button Styles */
+a.button, input.button
+{
+    width: 100px;
+	background: aliceBlue;
+    display: inline-block;
+	color: #333;
+	box-sizing: border-box;
+	font-weight: bold;
+	text-align: center;
+	padding: .25em;
+	text-decoration: none;
+	border: 1px solid steelBlue;
+	-webkit-border-radius: 4px;
+	-moz-border-radius: 4px;
+	border-radius: 4px;
+}
+
+.rightAlign 
+{
+    float: right;
+}

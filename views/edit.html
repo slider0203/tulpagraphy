@@ -1,0 +1,91 @@
+<html>
+    <head>
+        <title>Tulpagraphy - Create Map</title>
+        <link rel="stylesheet" href="/content/style.css">
+        <link rel="stylesheet" href="/content/tulpagraphy.css">
+        <script src="/node_modules/jquery/dist/jquery.min.js"></script>
+        <script src="/node_modules/underscore/underscore-min.js"></script>
+        <script src="/node_modules/knockout/build/output/knockout-latest.js"></script>
+        <script src="/scripts/event-tweaks.js"></script>
+        <script src="/scripts/tulpagraphy.core.js"></script>
+        <script src="/view-models/edit-map.js"></script>
+        <script src="/scripts/page-models.js"></script>
+        <script src="/scripts/entity-models.js"></script>
+        <nav>
+            <ul id="menu">
+                <li><a href="/">Tulpagraphy</a></li>
+                <li><a href="/views/create.html">New Map</a></li>
+                <li><a href="/views/maps.html">Load Map</a></li>
+            </ul>
+        </nav>
+    </head>
+    <body>
+<h2>Edit</h2>
+
+<section id="tulpagraphy"  data-bind="css: { loading: loading() }">
+    <section id="controls">
+        <label for="map-name">Name: </label>
+        <input type="text" data-bind="value: name, disable: loading" name="map-name" id="map-name" class="map-name"/>        
+        <label for="grid-opacity-slider">Grid Opacity: </label>
+        <div id="grid-opacity-slider" data-bind="slider: { value: gridOpacity, max: 1,  min: 0, step: .05 }"></div>
+        <label for="scale-slider">Scale: </label>
+        <div id="scale-slider" data-bind="slider: { value: scaleFactor, max: 2,  min: .5, step: .05 }"></div>
+        <section class="rightAlign">
+            <a class="button save" href="#" data-bind="click: saveMap">Save</a>
+            <a class="button showPrintImageButton" href="#" data-bind="click: printImageModel.show">Print Image</a>                        
+        </section>
+    </section>
+    <section id="map">
+        <section class="map-container" id="mapContainer">
+                <div class="map view" data-bind="style: { 'height': (height().pixelSize() * scaleFactor()).toString() + 'px',
+			'width': (width().pixelSize() * scaleFactor()).toString() + 'px' }">
+                    <canvas class="background-layer" data-bind="attr: { height: height().pixelSize() + 'px', width: width().pixelSize() + 'px' }"></canvas>
+                    <canvas class="embellishment-layer" data-bind="attr: { height: height().pixelSize() + 'px', width: width().pixelSize() + 'px' }"></canvas>
+                    <svg class="selection-layer" xmlns="http://www.w3.org/2000/svg" version="1.1" data-bind="style: { 'stroke-opacity': gridOpacity }">
+                    </svg>
+                    <div class="loading-blocker">
+                    </div>
+                </div>
+            <div class="loading-section">
+                <div class="loading-image" ></div>
+                <div class="message" data-bind="text: loadingMessage"></div>
+            </div>
+        </section>
+    </section>
+    <section id="toolbar" class="toolbar">
+        <section class="tool-set" data-bind="foreach: toolSets, accordion: {}">
+            <a href="#" data-bind="text: title">#</a>
+            <section class="tools">
+                <ul data-bind="foreach: tools">
+                    <li data-bind="event: { click: $root.setSelectedTool }, css: { selected: selected() }">
+                        <div>
+                            <img data-bind="attr: { src: imageUrl, alt: title }" src="#" alt="" />
+                            <span data-bind="text: title"></span>
+                        </div>
+                    </li>
+                </ul>
+            </section>
+        </section>
+    </section>
+</section>
+<section class="export-image-viewport" style="display: none;" onclick="{ return false; }">
+	<div class="view">
+		<div >
+			<section class="image-container">
+				<canvas class="image-canvas" height="1" width="1" data-bind="attr: { height: height().pixelSize() + 'px', width: width().pixelSize() + 'px' }"></canvas>
+			</section>
+			<ul class="actions">
+				<li><input type="button" class="button" value="Close" data-bind="click: printImageModel.hide, disable: printImageModel.working" /></li>
+				<li><input type="button" class="button" value="Refresh" data-bind="click: printImageModel.refreshCanvas, disable: printImageModel.working" /></li>
+				<li><input type="button" class="button" value="Save Image" data-bind="click: printImageModel.downloadImage, disable: printImageModel.working" /></li>
+				<li>
+					<label for="filename">Filename: </label>
+					<input type="text" name="filename" data-bind="value: printImageModel.filename, disable: printImageModel.working" />
+				</li>
+			</ul>
+		</div>
+		<div class="working-indicator" data-bind="css: { show: printImageModel.working() }"></div>
+	</div>
+</section>
+</body>
+</html>
