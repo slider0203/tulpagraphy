@@ -43,14 +43,6 @@ tg.factories.pageModelFactory =
 			min: 1,
 			max: 100
 		};
-
-		self.width.pixelSize = ko.computed(function () {
-			return self.getWidthPixelSize();
-		});
-
-		self.height.pixelSize = ko.computed(function () {
-			return self.getHeightPixelSize();
-		});
 	};
 
 	CreateMapViewModel.prototype = {
@@ -86,7 +78,7 @@ tg.factories.pageModelFactory =
 
 		generateMap: function () {
 			var map = {};
-
+			
 			map.name = this.title();
 			map.title = this.title();
 			map.tileDiameter = this.tileDiameter();

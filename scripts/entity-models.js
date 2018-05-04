@@ -753,8 +753,12 @@ tg.factories.mapEntityFactory =
     		getNextMapId: function () {
     			var maps = this.getMaps();
 
-    			var lastItem = _.max(maps, function (m) { return m.id; });
-    			var currentId = lastItem ? lastItem.id : 0;
+				var lastItem = _.max(maps, function (m) { return m.id; });
+				var currentId = lastItem ? lastItem.id : 0;
+
+				if (currentId == null) {
+					currentId = 0;
+				}
 
     			return +currentId + 1;
     		},

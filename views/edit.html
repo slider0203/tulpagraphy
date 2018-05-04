@@ -20,10 +20,8 @@
         </nav>
     </head>
     <body>
-<h2>Edit</h2>
-
-<section id="tulpagraphy"  data-bind="css: { loading: loading() }">
-    <section id="controls">
+        <section id="tulpagraphy"  data-bind="css: { loading: loading() }">
+    <!-- <section id="controls">
         <label for="map-name">Name: </label>
         <input type="text" data-bind="value: name, disable: loading" name="map-name" id="map-name" class="map-name"/>        
         <label for="grid-opacity-slider">Grid Opacity: </label>
@@ -34,7 +32,7 @@
             <a class="button save" href="#" data-bind="click: saveMap">Save</a>
             <a class="button showPrintImageButton" href="#" data-bind="click: printImageModel.show">Print Image</a>                        
         </section>
-    </section>
+    </section> -->
     <section id="map">
         <section class="map-container" id="mapContainer">
                 <div class="map view" data-bind="style: { 'height': (height().pixelSize() * scaleFactor()).toString() + 'px',
@@ -87,5 +85,5 @@
 		<div class="working-indicator" data-bind="css: { show: printImageModel.working() }"></div>
 	</div>
 </section>
-</body>
+    </body>
 </html>
