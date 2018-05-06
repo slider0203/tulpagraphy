@@ -41,7 +41,7 @@ tg.factories.mapEntityFactory =
 
     		self.pointsString = ko.computed(function () {
     			var points = [{ x: 0, y: .5 }, { x: .25, y: 0 }, { x: .5, y: 0 }, { x: .75, y: 0 }, { x: 1, y: .5 }, { x: .75, y: 1 }, { x: .5, y: 1 }, { x: .25, y: 1}];
-    			points = _.map(points, function (point) { return { x: point.x * +self.tileDiameter(), y: point.y * +self.tileDiameter() }; });
+    			points = _.map(points, function (point) { return { x: point.x * +self.tileDiameter(), y: point.y * +self.tileDiameter()*.5 }; });
 
     			return _.reduce(points, function (memo, point) { return memo + point.x.toString() + ',' + point.y.toString() + ' '; }, '');
     		});
@@ -91,7 +91,10 @@ tg.factories.mapEntityFactory =
     			var segments = [0, .5, .25, 0, .5, 0, .75, 0, 1, .5, .75, 1, .5, 1, .25, 1];
 
     			for (var segmentIndex in segments) {
-    				segments[segmentIndex] = segments[segmentIndex] * tileDiameter;
+					if (segmentIndex % 2 == 0)
+					segments[segmentIndex] = segments[segmentIndex] * tileDiameter;
+					else
+					segments[segmentIndex] = segments[segmentIndex] * tileDiameter / 2;
     			}
 
     			for (var segmentIndex = 0; segmentIndex < segments.length; segmentIndex += 2) {
@@ -117,7 +120,7 @@ tg.factories.mapEntityFactory =
     			}
 
     			tileData.xIndex = tileData.x / (.75 * self.tileDiameter());
-    			tileData.yIndex = parseInt(tileData.y / self.tileDiameter());
+    			tileData.yIndex = parseInt(tileData.y / (self.tileDiameter()/2));
     			tileData.points = points;
 
     			return new TileViewModel(tileData, self);
@@ -388,10 +391,10 @@ tg.factories.mapEntityFactory =
 
     		drawTerrainForTile: function (tile) {
     			var self = this;
-    			var imageNumber = (tile.x() + tile.y()) % tile.terrain().images.length;
+    			var imageNumber = 0;
     			if (tile.terrain().images[imageNumber].loaded()) {
     				var context = self.canvas.getContext('2d');
-    				context.drawImage(tile.terrain().images[imageNumber].element, tile.x(), tile.y(), tile.diameter(), tile.diameter());
+    				context.drawImage(tile.terrain().images[imageNumber].element, tile.x(), tile.y());
     			} else {
     				tile.layerData.background.terrainLoadedSubscription =
                         tile.terrain().images[imageNumber].loaded.subscribe(function () { self.handleTerrainLoaded(tile); });
@@ -518,10 +521,9 @@ tg.factories.mapEntityFactory =
     				} else {
     					context = context == null ? self.canvas.getContext('2d') : context;
 
-    					//TODO: Replace hard coded 192 with tile size
     					context.drawImage(tile.embellishment().images[imageNumber].element,
-                            tile.x() - ((tile.embellishment().images[imageNumber].element.width - 192) / 2),
-                            tile.y() - ((tile.embellishment().images[imageNumber].element.height - 192) / 2),
+                            tile.x() - ((tile.embellishment().images[imageNumber].element.width - 300) / 2),
+                            tile.y() - ((tile.embellishment().images[imageNumber].element.height - 150) / 2),
                             tile.embellishment().images[imageNumber].element.width,
                             tile.embellishment().images[imageNumber].element.height);
     				}
@@ -763,18 +765,6 @@ tg.factories.mapEntityFactory =
     			return +currentId + 1;
     		},
 
-    		getVersion: function () {
-    			return localStorage.version;
-    		},
-
-    		setVersion: function (version) {
-    			if (!version)
-    				delete localStorage.version;
-    			else {
-    				localStorage.version = version;
-    			}
-    		},
-
     		getTerrains: function () {
     			if (!terrains || !terrains.length) {
     				this._initializeTerrains();
@@ -843,9 +833,8 @@ tg.factories.mapEntityFactory =
 
     		_initializeTerrains: function () {
     			terrains = [
-                    new Terrain('black', 'Black', '/images/solids/black/', 500, 1),
-                    new Terrain('gray', 'Gray', '/images/solids/gray/', 500, 1),
-                    new Terrain('white', 'White', '/images/solids/white/', 500, 1)
+                    new Terrain('black', 'Black', '/images/terrain/black/', 500, 1),
+                    new Terrain('grass', 'Grass', '/images/terrain/grass/', 500, 1)
                 ];
     		},
 

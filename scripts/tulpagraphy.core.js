@@ -31,31 +31,6 @@ tg = (function(_) {
             if (window.console) {
                 window.console.log(Array.prototype.slice.call(arguments));
             }
-        },
-
-        redirect: function(url) {
-            url = this._sanitizeRedirectUrl(url, _.rest(arguments));
-
-            window.location.href = url;
-        },
-
-        _sanitizeRedirectUrl: function(url, params) {
-            if (!url) {
-                url = '';
-            }
-            if (url.indexOf('*') == 0) {
-                if (url.match( /\*map-index/ )) {
-                    url = '/Map';
-                }
-                if (url.match( /\*map-create/ )) {
-                    url = '/Map/Create';
-                }
-                if (url.match( /\*map-edit/ )) {
-                    url = '/Map/Edit/' + params[0];
-                }
-            }
-
-            return url;
         }
     };
     return new Tulpagraphy();

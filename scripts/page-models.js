@@ -11,26 +11,14 @@ tg.factories.pageModelFactory =
 		var self = this;
 
 		var terrains = _getNewMapContext().getTerrains();
-		var embellishments = _getNewMapContext().getEmbellishments();
-
-		self.terrains = _.sortBy(terrains, function (terrain) {
-			return terrain.name;
-		});
 
 		self.defaultTerrain = ko.observable(_.find(terrains, function (terrain) {
 			return terrain.name == 'Black';
 		}));
 
-		self.embellishments = _.sortBy(
-			_.filter(embellishments, function (embellishment) {
-				return embellishment.name() != "Clear" && !embellishment.name().match(/wall/gi);
-			}), function (embellishment) {
-				return embellishment.name();
-			});
-
 		self.defaultEmbellishment = ko.observable(null);
-		self.title = ko.observable(self.generateNewDefaultTitle());
-		self.tileDiameter = ko.observable(192);
+		self.title = ko.observable('untitled');
+		self.tileDiameter = ko.observable(300);
 
 		self.width = {
 			tileCount: ko.observable(40),
@@ -58,10 +46,6 @@ tg.factories.pageModelFactory =
 				var message = ex.name == 'QUOTA_EXCEEDED_ERR' ? 'Not enough room left to save this map :(' : 'Couldn\'t save the maps';
 				alert(message);
 			}
-		},
-
-		generateNewDefaultTitle: function () {
-			return 'untitled';
 		},
 
 		getHeightPixelSize: function () {
@@ -99,10 +83,10 @@ tg.factories.pageModelFactory =
 				var isEvenRow = xIndex % 2 == 1; // yes, if it's equal to 1, the first row is index 0, not index 1
 
 				for (var yIndex = 0; yIndex < height; yIndex++) {
-					yCartesian = diameter * yIndex;
+					yCartesian = diameter * .5 * yIndex;
 
 					if (isEvenRow) {
-						yCartesian += diameter * .5;
+						yCartesian += diameter * .5 * .5;
 					}
 
 					tiles.push(self.generateTileData(xCartesian, yCartesian, terrainId, embellishmentId));
@@ -130,7 +114,7 @@ tg.factories.pageModelFactory =
 		self.name = mapViewModel.name;
 		self.loading = ko.observable(false);
 		self.loadingMessage = ko.observable('');
-		self.gridOpacity = ko.observable(.7);
+		self.gridOpacity = ko.observable(0);
 		self.width = mapViewModel.width;
 		self.height = mapViewModel.height;
 		self.tiles = mapViewModel.tiles;
@@ -363,7 +347,6 @@ tg.factories.pageModelFactory =
 		var self = this;
 		var context = _getNewMapContext();
 
-		self.validateContext(context);
 		var maps = _.map(context.getMaps(), function (map) {
 			return {
 				id: ko.observable(map.id),
@@ -403,16 +386,8 @@ tg.factories.pageModelFactory =
 	};
 
 	MapIndexViewModel.prototype = {
-		validateContext: function (context) {
-			if (!context.getVersion()) {
-				context.clearMaps();
-			}
-
-			context.setVersion('1');
-		},
-
 		createMap: function () {
-			tg.redirect('*map-create');
+			//TODO: Create blank map
 		}
 	};
 
