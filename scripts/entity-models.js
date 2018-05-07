@@ -834,6 +834,7 @@ tg.factories.mapEntityFactory =
     		_initializeTerrains: function () {
     			terrains = [
                     new Terrain('black', 'Black', '/images/terrain/black/', 500, 1),
+                    new Terrain('blank', 'Blank', '/images/terrain/blank/', 500, 1),
                     new Terrain('grass', 'Grass', '/images/terrain/grass/', 500, 1)
                 ];
     		},

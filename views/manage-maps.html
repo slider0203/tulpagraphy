@@ -7,8 +7,6 @@
         <script src="/node_modules/knockout/build/output/knockout-latest.js"></script>
         <script src="/scripts/tulpagraphy.core.js"></script>
         <script src="/Scripts/entity-models.js"></script>
-        <script src="/Scripts/page-models.js"></script>
-		<script src="/view-models/view-maps.js"></script>
         <nav>
             <ul id="menu">
                 <li><a href="/">Tulpagraphy</a></li>
@@ -39,7 +37,7 @@
 					<div class="col-4"></div>
 				</div>
 				<div class="row" data-bind="foreach: maps">
-					<div class="col-4"><a class="button" data-bind="attr: { href: '/views/edit?id=' + id()}, text: id"></a></div>
+					<div class="col-4"><a class="button" data-bind="attr: { href: '/views/edit?id=' + id}, text: id"></a></div>
 					<div class="col-4"><span data-bind="text: name"></span></div>
 					<div class="col-4"><a href="#" class="button" data-bind="click: $root.deleteMap">Delete</a></div>
 				</div>

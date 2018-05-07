@@ -6,106 +6,6 @@ tg.factories.pageModelFactory =
 		return tg.factories.mapEntityFactory.constructMapContext();
 	};
 
-	/// View Models
-	function CreateMapViewModel() {
-		var self = this;
-
-		var terrains = _getNewMapContext().getTerrains();
-
-		self.defaultTerrain = ko.observable(_.find(terrains, function (terrain) {
-			return terrain.name == 'Black';
-		}));
-
-		self.defaultEmbellishment = ko.observable(null);
-		self.title = ko.observable('untitled');
-		self.tileDiameter = ko.observable(300);
-
-		self.width = {
-			tileCount: ko.observable(40),
-			min: 1,
-			max: 100
-		};
-
-		self.height = {
-			tileCount: ko.observable(40),
-			min: 1,
-			max: 100
-		};
-	};
-
-	CreateMapViewModel.prototype = {
-		create: function () {
-			try {
-				var map = this.generateMap();
-				var context = _getNewMapContext();
-
-				context.saveMap(map);
-				window.location = '/views/edit?id=' + map.id;
-			}
-			catch (ex) {
-				var message = ex.name == 'QUOTA_EXCEEDED_ERR' ? 'Not enough room left to save this map :(' : 'Couldn\'t save the maps';
-				alert(message);
-			}
-		},
-
-		getHeightPixelSize: function () {
-			var height = (+this.height.tileCount() + .5) * +this.tileDiameter();
-
-			return height;
-		},
-
-		getWidthPixelSize: function () {
-			var width = (.25 * +this.tileDiameter()) + (.75 * +this.tileDiameter() * +this.width.tileCount());
-
-			return width;
-		},
-
-		generateMap: function () {
-			var map = {};
-			
-			map.name = this.title();
-			map.title = this.title();
-			map.tileDiameter = this.tileDiameter();
-			map.tiles = this.generateTiles(this.width.tileCount(), this.height.tileCount(), this.tileDiameter(), this.defaultTerrain(), this.defaultEmbellishment());
-
-			return map;
-		},
-
-		generateTiles: function (width, height, diameter, defaultTerrain, defaultEmbellishment) {
-			var self = this;
-			var tiles = [];
-			var terrainId = defaultTerrain ? defaultTerrain.id : null;
-			var embellishmentId = defaultEmbellishment ? defaultEmbellishment.id() : null;
-			var xCartesian, yCartesian;
-
-			for (var xIndex = 0; xIndex < width; xIndex++) {
-				xCartesian = .75 * diameter * xIndex;
-				var isEvenRow = xIndex % 2 == 1; // yes, if it's equal to 1, the first row is index 0, not index 1
-
-				for (var yIndex = 0; yIndex < height; yIndex++) {
-					yCartesian = diameter * .5 * yIndex;
-
-					if (isEvenRow) {
-						yCartesian += diameter * .5 * .5;
-					}
-
-					tiles.push(self.generateTileData(xCartesian, yCartesian, terrainId, embellishmentId));
-				}
-			}
-
-			return tiles;
-		},
-
-		generateTileData: function (x, y, terrainId, embellishmentId) {
-			return {
-				x: x,
-				y: y,
-				terrainId: terrainId,
-				embellishmentId: embellishmentId
-			};
-		}
-	};
-
 	function EditMapViewModel(mapViewModel) {
 		var self = this;
 
@@ -343,54 +243,6 @@ tg.factories.pageModelFactory =
 		}
 	};
 
-	function MapIndexViewModel() {
-		var self = this;
-		var context = _getNewMapContext();
-
-		var maps = _.map(context.getMaps(), function (map) {
-			return {
-				id: ko.observable(map.id),
-				name: ko.observable(map.name)
-			};
-		});
-
-		self.clearMaps = function (map) {
-			if (confirm('You really want to clear all the maps?')) {
-				var context = _getNewMapContext();
-
-				context.clearMaps();
-				self.maps.removeAll();
-			}
-		};
-
-		self.deleteMap = function (map) {
-			self.working(true);
-
-			try {
-				var context = _getNewMapContext();
-
-				if (context.deleteMap(map)) {
-					self.maps.remove(map);
-				}
-			}
-			catch (e) {
-				alert('Couldn\'t delete the map!');
-			}
-			finally {
-				self.working(false);
-			}
-		};
-
-		self.working = ko.observable(false);
-		self.maps = ko.observableArray(maps);
-	};
-
-	MapIndexViewModel.prototype = {
-		createMap: function () {
-			//TODO: Create blank map
-		}
-	};
-
 	function ToolSet(title, tools) {
 		var self = this;
 
@@ -433,16 +285,8 @@ tg.factories.pageModelFactory =
 	function MapPageModelFactory() { };
 
 	MapPageModelFactory.prototype = {
-		constructCreateMapModel: function () {
-			return new CreateMapViewModel();
-		},
-
 		constructEditMapModel: function (mapViewModel) {
 			return new EditMapViewModel(mapViewModel);
-		},
-
-		constructMapIndexModel: function () {
-			return new MapIndexViewModel();
 		},
 
 		constructPrintMapToImageVm: function ($popup, mapViewModel, $mapContainer, destinationCanvas, definedOptions) {
