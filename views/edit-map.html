@@ -11,16 +11,15 @@
         <script src="/view-models/edit-map.js"></script>
         <script src="/scripts/page-models.js"></script>
         <script src="/scripts/entity-models.js"></script>
-        <nav>
+        <!-- <nav>
             <ul id="menu">
                 <li><a href="/">Tulpagraphy</a></li>
-                <li><a href="/views/create.html">New Map</a></li>
                 <li><a href="/views/manage-maps.html">Manage Maps</a></li>
             </ul>
-        </nav>
+        </nav> -->
     </head>
     <body>
-        <section id="tulpagraphy"  data-bind="css: { loading: loading() }">
+        <section id="tulpagraphy">
     <!-- <section id="controls">
         <label for="map-name">Name: </label>
         <input type="text" data-bind="value: name, disable: loading" name="map-name" id="map-name" class="map-name"/>        
@@ -33,7 +32,7 @@
             <a class="button showPrintImageButton" href="#" data-bind="click: printImageModel.show">Print Image</a>                        
         </section>
     </section> -->
-    <section id="map">
+    <!-- <section id="map">
         <section class="map-container" id="mapContainer">
                 <div class="map view" data-bind="style: { 'height': (height().pixelSize() * scaleFactor()).toString() + 'px',
 			'width': (width().pixelSize() * scaleFactor()).toString() + 'px' }">
@@ -83,7 +82,7 @@
 			</ul>
 		</div>
 		<div class="working-indicator" data-bind="css: { show: printImageModel.working() }"></div>
-	</div>
+	</div> -->
 </section>
     </body>
 </html>

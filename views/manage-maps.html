@@ -10,7 +10,6 @@
         <nav>
             <ul id="menu">
                 <li><a href="/">Tulpagraphy</a></li>
-                <li><a href="/views/create.html">New Map</a></li>
                 <li><a href="/views/manage-maps.html">Manage Maps</a></li>
             </ul>
         </nav>
@@ -37,7 +36,7 @@
 					<div class="col-4"></div>
 				</div>
 				<div class="row" data-bind="foreach: maps">
-					<div class="col-4"><a class="button" data-bind="attr: { href: '/views/edit?id=' + id}, text: id"></a></div>
+					<div class="col-4"><a class="button" data-bind="attr: { href: '/views/edit-map?id=' + id}, text: id"></a></div>
 					<div class="col-4"><span data-bind="text: name"></span></div>
 					<div class="col-4"><a href="#" class="button" data-bind="click: $root.deleteMap">Delete</a></div>
 				</div>
