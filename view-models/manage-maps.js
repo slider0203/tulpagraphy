@@ -44,7 +44,7 @@
 
                     var context = _getNewMapContext();
                     context.saveMap(map);
-                    window.location = '/views/edit?id=' + map.id;
+                    window.location = '/views/edit-map?id=' + map.id;
                 }
                 catch (ex) {
                     var message = ex.name == 'QUOTA_EXCEEDED_ERR' ? 'Not enough room left to save this map :(' : 'Couldn\'t save the maps';
