@@ -1,16 +1,25 @@
 <html>
     <head>
         <title>Tulpagraphy</title>
-        <link rel="stylesheet" href="/content/style.css">
-        <link rel="stylesheet" href="/content/tulpagraphy.css">
-        <script src="/node_modules/jquery/dist/jquery.min.js"></script>
+        <!-- <link rel="stylesheet" href="/content/style.css"> -->
+        <!-- <link rel="stylesheet" href="/content/tulpagraphy.css"> -->
+        <!-- <script src="/node_modules/jquery/dist/jquery.min.js"></script>
         <script src="/node_modules/underscore/underscore-min.js"></script>
         <script src="/node_modules/knockout/build/output/knockout-latest.js"></script>
         <script src="/scripts/event-tweaks.js"></script>
         <script src="/scripts/tulpagraphy.core.js"></script>
-        <script src="/view-models/edit-map.js"></script>
         <script src="/scripts/page-models.js"></script>
-        <script src="/scripts/entity-models.js"></script>
+        <script src="/scripts/entity-models.js"></script> -->
+        <style>
+                html, body {
+                    width: 100%;
+                    height: 100%;
+                    margin: 0px;
+                    border: 0;
+                    overflow: hidden; /*  Disable scrollbars */
+                    display: block;  /* No floating content on sides */
+                }
+            </style>
         <!-- <nav>
             <ul id="menu">
                 <li><a href="/">Tulpagraphy</a></li>
@@ -19,7 +28,7 @@
         </nav> -->
     </head>
     <body>
-        <section id="tulpagraphy">
+        <canvas id="map"></canvas>
     <!-- <section id="controls">
         <label for="map-name">Name: </label>
         <input type="text" data-bind="value: name, disable: loading" name="map-name" id="map-name" class="map-name"/>        
@@ -31,7 +40,7 @@
             <a class="button save" href="#" data-bind="click: saveMap">Save</a>
             <a class="button showPrintImageButton" href="#" data-bind="click: printImageModel.show">Print Image</a>                        
         </section>
-    </section> -->
+    </section>
     <section id="map">
         <section class="map-container" id="mapContainer">
                 <div class="map view" data-bind="style: { 'height': (height().pixelSize() * scaleFactor()).toString() + 'px',
@@ -83,6 +92,9 @@
 		</div>
 		<div class="working-indicator" data-bind="css: { show: printImageModel.working() }"></div>
 	</div>
-</section>
+</section> -->
     </body>
 </html>
+
+<script src="/scripts/tulpagraphy.js"></script>
+<script src="/view-models/edit-map.js"></script>
