@@ -5,6 +5,9 @@ tg = (function() {
         self.context = self.canvas.getContext('2d');
         self.xOffset = 0;
         self.yOffset = 0;
+        self.tileWidth = 300;
+        self.tileHeight = 150;
+        self.points = [{x: 0, y: .5}, {x: .25, y: 0}, {x: .75, y: 0}, {x: 1, y: .5}, {x: .75, y: 1}, {x: .25, y: 1}];
 
         self.tiles = mapData.tiles;
         self.blankImage = new MapImage('/images/terrain/blank/1.png');
@@ -33,11 +36,11 @@ tg = (function() {
             var bounds = self.getBounds();
             for (var xIndex = bounds.xMin; xIndex < bounds.xMax; xIndex++) {
                 var xCartesian = self.getCartesianX(xIndex);
-                if (xCartesian < event.offsetX && xCartesian + 300 > event.offsetX) {
+                if (xCartesian < event.offsetX && xCartesian + self.tileWidth > event.offsetX) {
                     for (var yIndex = bounds.yMin; yIndex < bounds.yMax; yIndex++) {
                         var isEvenRow = Math.abs(xIndex) % 2 == 1; // yes, if it's equal to 1, the first row is index 0, not index 1
                          var yCartesian = self.getCartesianY(yIndex, isEvenRow);
-                        if (yCartesian < event.offsetY && yCartesian + 150 > event.offsetY) {
+                        if (yCartesian < event.offsetY && yCartesian + self.tileHeight > event.offsetY) {
                             if (self.pointIntersects(xCartesian, yCartesian)) {
                                 console.log(xIndex, yIndex);
                                 return;
@@ -51,13 +54,15 @@ tg = (function() {
         pointIntersects: function(xCartesian, yCartesian) {
             var self = this;
             self.context.beginPath();
-            self.context.moveTo(xCartesian, yCartesian + 75);
-            self.context.lineTo(xCartesian + 75, yCartesian);
-            self.context.lineTo(xCartesian + 225, yCartesian);
-            self.context.lineTo(xCartesian + 300, yCartesian + 75);
-            self.context.lineTo(xCartesian + 225, yCartesian + 150);
-            self.context.lineTo(xCartesian + 75, yCartesian + 150);
-            
+            for(var i = 0; i < self.points.length; i++) {
+                if (i == 0) {
+                    self.context.moveTo(xCartesian + self.points[i].x * self.tileWidth, yCartesian + self.points[i].y * self.tileHeight);
+                }
+                else {
+                    self.context.lineTo(xCartesian + self.points[i].x * self.tileWidth, yCartesian + self.points[i].y * self.tileHeight);
+                }
+            }
+
             if (self.context.isPointInPath(event.offsetX, event.offsetY)) {
                 return true;
             } else {
@@ -67,12 +72,12 @@ tg = (function() {
 
         getTotalTiles: function() {
             var self = this;
-            return { x: Math.ceil(self.canvas.width / (.75 * 300)) + 2, y : Math.ceil(self.canvas.height / 150) + 2 };
+            return { x: Math.ceil(self.canvas.width / (.75 * self.tileWidth)) + 2, y : Math.ceil(self.canvas.height / self.tileHeight) + 2 };
         },
 
         getTileOffset: function() {
             var self = this;
-            return { x: Math.ceil(self.xOffset / (.75 * 300)), y: Math.ceil(self.yOffset / 150) };
+            return { x: Math.ceil(self.xOffset / (.75 * self.tileWidth)), y: Math.ceil(self.yOffset / self.tileHeight) };
         },
 
         redraw: function() {
@@ -90,13 +95,13 @@ tg = (function() {
 
         getCartesianX: function(xIndex) {
             var self = this;
-            return .75 * 300 * xIndex + self.xOffset - 150;
+            return .75 * self.tileWidth * xIndex + self.xOffset - self.tileWidth / 2;
         },
         
         getCartesianY: function(yIndex, evenRow) {
             var self = this;
-            var yCartesian = 150 * yIndex + self.yOffset - 75;
-            yCartesian += evenRow ? 150 * .5 : 0;
+            var yCartesian = self.tileHeight * yIndex + self.yOffset -  self.tileHeight / 2;
+            yCartesian += evenRow ? self.tileHeight / 2 : 0;
             return yCartesian;
         },
 
