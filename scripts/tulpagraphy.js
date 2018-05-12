@@ -28,6 +28,43 @@ tg = (function() {
                      yMax: totalTiles.y - tileOffset.y };
         },
 
+        getTile: function(event) {
+            var self = this;
+            var bounds = self.getBounds();
+            for (var xIndex = bounds.xMin; xIndex < bounds.xMax; xIndex++) {
+                var xCartesian = self.getCartesianX(xIndex);
+                if (xCartesian < event.offsetX && xCartesian + 300 > event.offsetX) {
+                    for (var yIndex = bounds.yMin; yIndex < bounds.yMax; yIndex++) {
+                        var isEvenRow = Math.abs(xIndex) % 2 == 1; // yes, if it's equal to 1, the first row is index 0, not index 1
+                         var yCartesian = self.getCartesianY(yIndex, isEvenRow);
+                        if (yCartesian < event.offsetY && yCartesian + 150 > event.offsetY) {
+                            if (self.pointIntersects(xCartesian, yCartesian)) {
+                                console.log(xIndex, yIndex);
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+        },
+
+        pointIntersects: function(xCartesian, yCartesian) {
+            var self = this;
+            self.context.beginPath();
+            self.context.moveTo(xCartesian, yCartesian + 75);
+            self.context.lineTo(xCartesian + 75, yCartesian);
+            self.context.lineTo(xCartesian + 225, yCartesian);
+            self.context.lineTo(xCartesian + 300, yCartesian + 75);
+            self.context.lineTo(xCartesian + 225, yCartesian + 150);
+            self.context.lineTo(xCartesian + 75, yCartesian + 150);
+            
+            if (self.context.isPointInPath(event.offsetX, event.offsetY)) {
+                return true;
+            } else {
+                return false;
+            }
+        },
+
         getTotalTiles: function() {
             var self = this;
             return { x: Math.ceil(self.canvas.width / (.75 * 300)) + 2, y : Math.ceil(self.canvas.height / 150) + 2 };
@@ -44,22 +81,30 @@ tg = (function() {
             var bounds = self.getBounds();
             for (var xIndex = bounds.xMin; xIndex < bounds.xMax; xIndex++) {
                 for (var yIndex = bounds.yMin; yIndex < bounds.yMax; yIndex++) {
-                    var xCartesian = .75 * 300 * xIndex + self.xOffset;
                     var isEvenRow = Math.abs(xIndex) % 2 == 1; // yes, if it's equal to 1, the first row is index 0, not index 1
-                    var yCartesian = 150 * yIndex + self.yOffset;
 
-                    if (isEvenRow) {
-                        yCartesian += 150 * .5;
-                    }
-                    self.context.drawImage(self.blankImage.element, xCartesian-150, yCartesian-75);
+                    self.context.drawImage(self.blankImage.element, self.getCartesianX(xIndex), self.getCartesianY(yIndex, isEvenRow));
                 }
             }
+        },
+
+        getCartesianX: function(xIndex) {
+            var self = this;
+            return .75 * 300 * xIndex + self.xOffset - 150;
+        },
+        
+        getCartesianY: function(yIndex, evenRow) {
+            var self = this;
+            var yCartesian = 150 * yIndex + self.yOffset - 75;
+            yCartesian += evenRow ? 150 * .5 : 0;
+            return yCartesian;
         },
 
         initialize: function() {
             var self = this;
             function render() {
                 window.addEventListener('resize', self.resizeCanvas.bind(self), false);
+                self.canvas.addEventListener('click', self.getTile.bind(self), false);
                 document.onkeydown = function(e) {
                     switch (e.keyCode) {
                         case 37:
