@@ -1,6 +1,8 @@
 tg = (function() {
     function MapViewModel(mapData) {
         var self = this;
+        self.id = mapData.id;
+        self.name = mapData.name;
         self.canvas = document.getElementById('map');
         self.context = self.canvas.getContext('2d');
         self.xOffset = 0;
@@ -11,6 +13,7 @@ tg = (function() {
 
         self.tiles = mapData.tiles;
         self.blankImage = new MapImage('/images/terrain/blank/1.png');
+        self.grassImage = new MapImage('/images/terrain/grass/1.png');
     }
 
     MapViewModel.prototype = {
@@ -31,19 +34,30 @@ tg = (function() {
                      yMax: totalTiles.y - tileOffset.y };
         },
 
-        getTile: function(event) {
+        changeTile: function(event) {
+            var self = this;
+            var tileIndex = self.getTileIndex(event.offsetX, event.offsetY);
+            var tile = self.tiles.find(tile => tile.x == tileIndex.x && tile.y == tileIndex.y);
+            if (!tile) {
+                self.tiles.push({x: tileIndex.x, y: tileIndex.y, t: 'grass'})
+            }
+            tile = {x: tileIndex.x, y: tileIndex.y, t: 'grass'};
+            self.redraw();
+            tg.saveMap({id: self.id, name: self.name, tiles: self.tiles})
+        },
+
+        getTileIndex: function(x, y) {
             var self = this;
             var bounds = self.getBounds();
             for (var xIndex = bounds.xMin; xIndex < bounds.xMax; xIndex++) {
                 var xCartesian = self.getCartesianX(xIndex);
-                if (xCartesian < event.offsetX && xCartesian + self.tileWidth > event.offsetX) {
+                if (xCartesian < x && xCartesian + self.tileWidth > x) {
                     for (var yIndex = bounds.yMin; yIndex < bounds.yMax; yIndex++) {
                         var isEvenRow = Math.abs(xIndex) % 2 == 1; // yes, if it's equal to 1, the first row is index 0, not index 1
                          var yCartesian = self.getCartesianY(yIndex, isEvenRow);
-                        if (yCartesian < event.offsetY && yCartesian + self.tileHeight > event.offsetY) {
+                        if (yCartesian < y && yCartesian + self.tileHeight > y) {
                             if (self.pointIntersects(xCartesian, yCartesian)) {
-                                console.log(xIndex, yIndex);
-                                return;
+                                return {x: xIndex, y: yIndex};
                             }
                         }
                     }
@@ -53,6 +67,7 @@ tg = (function() {
 
         pointIntersects: function(xCartesian, yCartesian) {
             var self = this;
+            self.context.save();
             self.context.beginPath();
             for(var i = 0; i < self.points.length; i++) {
                 if (i == 0) {
@@ -87,8 +102,12 @@ tg = (function() {
             for (var xIndex = bounds.xMin; xIndex < bounds.xMax; xIndex++) {
                 for (var yIndex = bounds.yMin; yIndex < bounds.yMax; yIndex++) {
                     var isEvenRow = Math.abs(xIndex) % 2 == 1; // yes, if it's equal to 1, the first row is index 0, not index 1
-
-                    self.context.drawImage(self.blankImage.element, self.getCartesianX(xIndex), self.getCartesianY(yIndex, isEvenRow));
+                    var tile = self.tiles.find(tile => tile.x == xIndex && tile.y == yIndex);
+                    if (tile) {
+                        self.context.drawImage(self.grassImage.element, self.getCartesianX(xIndex), self.getCartesianY(yIndex, isEvenRow));                        
+                    } else {
+                        self.context.drawImage(self.blankImage.element, self.getCartesianX(xIndex), self.getCartesianY(yIndex, isEvenRow));
+                    }
                 }
             }
         },
@@ -109,23 +128,29 @@ tg = (function() {
             var self = this;
             function render() {
                 window.addEventListener('resize', self.resizeCanvas.bind(self), false);
-                self.canvas.addEventListener('click', self.getTile.bind(self), false);
+                self.canvas.addEventListener('click', self.changeTile.bind(self), false);
                 document.onkeydown = function(e) {
                     switch (e.keyCode) {
                         case 37:
-                            self.xOffset -= 5;
-                            self.redraw();
-                            break;
-                        case 38:
-                            self.yOffset -= 5;
-                            self.redraw();
-                            break;
-                        case 39:
                             self.xOffset += 5;
                             self.redraw();
                             break;
-                        case 40:
+                        case 38:
                             self.yOffset += 5;
+                            self.redraw();
+                            break;
+                        case 39:
+                            self.xOffset -= 5;
+                            self.redraw();
+                            break;
+                        case 40:
+                            self.yOffset -= 5;
+                            self.redraw();
+                            break;
+                        case 109:
+                            self.redraw();
+                            break;
+                        case 107:
                             self.redraw();
                             break;
                     }
@@ -133,7 +158,8 @@ tg = (function() {
                 self.resizeCanvas();
             }
 
-            self.blankImage.element.addEventListener('load', render)
+            self.blankImage.element.addEventListener('load', render);
+            self.grassImage.element.addEventListener('load', render);
         }
     }
 
@@ -194,6 +220,10 @@ tg = (function() {
             var id = this.getNextId();
             localStorage.setItem(id, JSON.stringify({id: id, name: 'untitled', tiles: []}));
             return id;
+        },
+
+        saveMap: function(data) {
+            localStorage.setItem(data.id, JSON.stringify(data));
         },
 
         getNextId: function() {
