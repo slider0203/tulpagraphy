@@ -1,12 +1,51 @@
 tg = (function() {
+    function TulpaEvent() {
+        var self = this;
+        self.button = 0;
+    }
+
+    TulpaEvent.prototype = {
+        mouseDown: function(event) {
+            var self = this;
+            event.preventDefault();
+            self.button = event.buttons;
+            return false;
+        },
+
+        mouseUp: function(event) {
+            var self = this;
+            event.preventDefault();
+            self.button = 0;
+            return false;
+        },
+
+        mouseClick: function(callback, event) {
+            var self = this;
+            callback(event);
+            event.preventDefault();
+            return false;
+        },
+
+        mouseMove: function(primaryCallback, secondaryCallback, event) {
+            var self = this;
+            event.preventDefault();
+            if (self.button == 1) {
+                primaryCallback(event);
+            }
+            if (self.button == 2) {
+                secondaryCallback(event.movementX, event.movementY);
+            }
+            return false;
+        }
+    }
+
     function MapViewModel(mapData) {
         var self = this;
         self.id = mapData.id;
         self.name = mapData.name;
         self.canvas = document.getElementById('map');
         self.context = self.canvas.getContext('2d');
-        self.xOffset = 0;
-        self.yOffset = 0;
+        self.offset = {x: 0, y: 0};
         self.scale = 1;
         self.tileWidth = 300;
         self.tileHeight = 150;
@@ -26,6 +65,13 @@ tg = (function() {
         getTileWidth: function() {
             var self = this;
             return self.tileWidth * self.scale;
+        },
+
+        moveView: function(x, y) {
+            var self = this;
+            self.offset.x += x;
+            self.offset.y += y;
+            self.redraw();
         },
 
         resizeCanvas: function() {
@@ -103,7 +149,7 @@ tg = (function() {
 
         getTileOffset: function() {
             var self = this;
-            return { x: Math.ceil(self.xOffset / (.75 * self.getTileWidth())), y: Math.ceil(self.yOffset / self.getTileHeight()) };
+            return { x: Math.ceil(self.offset.x / (.75 * self.getTileWidth())), y: Math.ceil(self.offset.y / self.getTileHeight()) };
         },
 
         redraw: function() {
@@ -127,38 +173,39 @@ tg = (function() {
 
         getCartesianX: function(xIndex) {
             var self = this;
-            return (.75 * self.getTileWidth() * xIndex) + self.xOffset - (self.getTileWidth() / 2);
+            return (.75 * self.getTileWidth() * xIndex) + self.offset.x - (self.getTileWidth() / 2);
         },
         
         getCartesianY: function(yIndex, evenRow) {
             var self = this;
-            var yCartesian = (self.getTileHeight() * yIndex) + self.yOffset - (self.getTileHeight() / 2);
+            var yCartesian = (self.getTileHeight() * yIndex) + self.offset.y - (self.getTileHeight() / 2);
             yCartesian += evenRow ? (self.getTileHeight() / 2) : 0;
             return yCartesian;
         },
 
         initialize: function() {
             var self = this;
+            var tulpaEvent = new TulpaEvent();
             function render() {
                 window.addEventListener('resize', self.resizeCanvas.bind(self), false);
-                self.canvas.addEventListener('click', self.changeTile.bind(self), false);
+                self.canvas.addEventListener('mousedown', tulpaEvent.mouseDown.bind(tulpaEvent), false);
+                self.canvas.addEventListener('mousemove', tulpaEvent.mouseMove.bind(tulpaEvent, self.changeTile.bind(self), self.moveView.bind(self)), false);
+                self.canvas.addEventListener('mouseup', tulpaEvent.mouseUp.bind(tulpaEvent), false);
+                self.canvas.addEventListener('click', tulpaEvent.mouseClick.bind(tulpaEvent, self.changeTile.bind(self)), false);
+                self.canvas.addEventListener('contextmenu', function(e) {e.preventDefault();}, false);
                 document.onkeydown = function(e) {
                     switch (e.keyCode) {
                         case 37:
-                            self.xOffset += 5;
-                            self.redraw();
+                            self.moveView(5, 0);
                             break;
                         case 38:
-                            self.yOffset += 5;
-                            self.redraw();
+                            self.moveView(0, 5);
                             break;
                         case 39:
-                            self.xOffset -= 5;
-                            self.redraw();
+                            self.moveView(-5, 0);
                             break;
                         case 40:
-                            self.yOffset -= 5;
-                            self.redraw();
+                            self.moveView(0, -5);
                             break;
                         case 109:
                             self.scale = Math.max(self.scale - .05, .3);
