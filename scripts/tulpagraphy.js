@@ -7,6 +7,7 @@ tg = (function() {
         self.context = self.canvas.getContext('2d');
         self.xOffset = 0;
         self.yOffset = 0;
+        self.scale = 1;
         self.tileWidth = 300;
         self.tileHeight = 150;
         self.points = [{x: 0, y: .5}, {x: .25, y: 0}, {x: .75, y: 0}, {x: 1, y: .5}, {x: .75, y: 1}, {x: .25, y: 1}];
@@ -17,6 +18,16 @@ tg = (function() {
     }
 
     MapViewModel.prototype = {
+        getTileHeight: function() {
+            var self = this;
+            return self.tileHeight * self.scale;
+        },
+
+        getTileWidth: function() {
+            var self = this;
+            return self.tileWidth * self.scale;
+        },
+
         resizeCanvas: function() {
             var self = this;
             self.canvas.width = window.innerWidth;
@@ -51,11 +62,11 @@ tg = (function() {
             var bounds = self.getBounds();
             for (var xIndex = bounds.xMin; xIndex < bounds.xMax; xIndex++) {
                 var xCartesian = self.getCartesianX(xIndex);
-                if (xCartesian < x && xCartesian + self.tileWidth > x) {
+                if (xCartesian < x && xCartesian + self.getTileWidth() > x) {
                     for (var yIndex = bounds.yMin; yIndex < bounds.yMax; yIndex++) {
                         var isEvenRow = Math.abs(xIndex) % 2 == 1; // yes, if it's equal to 1, the first row is index 0, not index 1
                          var yCartesian = self.getCartesianY(yIndex, isEvenRow);
-                        if (yCartesian < y && yCartesian + self.tileHeight > y) {
+                        if (yCartesian < y && yCartesian + self.getTileHeight() > y) {
                             if (self.pointIntersects(xCartesian, yCartesian)) {
                                 return {x: xIndex, y: yIndex};
                             }
@@ -71,10 +82,10 @@ tg = (function() {
             self.context.beginPath();
             for(var i = 0; i < self.points.length; i++) {
                 if (i == 0) {
-                    self.context.moveTo(xCartesian + self.points[i].x * self.tileWidth, yCartesian + self.points[i].y * self.tileHeight);
+                    self.context.moveTo(xCartesian + self.points[i].x * self.getTileWidth(), yCartesian + self.points[i].y * self.getTileHeight());
                 }
                 else {
-                    self.context.lineTo(xCartesian + self.points[i].x * self.tileWidth, yCartesian + self.points[i].y * self.tileHeight);
+                    self.context.lineTo(xCartesian + self.points[i].x * self.getTileWidth(), yCartesian + self.points[i].y * self.getTileHeight());
                 }
             }
 
@@ -87,12 +98,12 @@ tg = (function() {
 
         getTotalTiles: function() {
             var self = this;
-            return { x: Math.ceil(self.canvas.width / (.75 * self.tileWidth)) + 2, y : Math.ceil(self.canvas.height / self.tileHeight) + 2 };
+            return { x: Math.ceil(self.canvas.width / (.75 * self.getTileWidth())) + 2, y : Math.ceil(self.canvas.height / self.getTileHeight()) + 2 };
         },
 
         getTileOffset: function() {
             var self = this;
-            return { x: Math.ceil(self.xOffset / (.75 * self.tileWidth)), y: Math.ceil(self.yOffset / self.tileHeight) };
+            return { x: Math.ceil(self.xOffset / (.75 * self.getTileWidth())), y: Math.ceil(self.yOffset / self.getTileHeight()) };
         },
 
         redraw: function() {
@@ -104,9 +115,11 @@ tg = (function() {
                     var isEvenRow = Math.abs(xIndex) % 2 == 1; // yes, if it's equal to 1, the first row is index 0, not index 1
                     var tile = self.tiles.find(tile => tile.x == xIndex && tile.y == yIndex);
                     if (tile) {
-                        self.context.drawImage(self.grassImage.element, self.getCartesianX(xIndex), self.getCartesianY(yIndex, isEvenRow));                        
+                        self.context.drawImage(self.grassImage.element, self.getCartesianX(xIndex), self.getCartesianY(yIndex, isEvenRow),
+                            self.getTileWidth(), self.getTileHeight());
                     } else {
-                        self.context.drawImage(self.blankImage.element, self.getCartesianX(xIndex), self.getCartesianY(yIndex, isEvenRow));
+                        self.context.drawImage(self.blankImage.element, self.getCartesianX(xIndex), self.getCartesianY(yIndex, isEvenRow),
+                            self.getTileWidth(), self.getTileHeight());
                     }
                 }
             }
@@ -114,13 +127,13 @@ tg = (function() {
 
         getCartesianX: function(xIndex) {
             var self = this;
-            return .75 * self.tileWidth * xIndex + self.xOffset - self.tileWidth / 2;
+            return (.75 * self.getTileWidth() * xIndex) + self.xOffset - (self.getTileWidth() / 2);
         },
         
         getCartesianY: function(yIndex, evenRow) {
             var self = this;
-            var yCartesian = self.tileHeight * yIndex + self.yOffset -  self.tileHeight / 2;
-            yCartesian += evenRow ? self.tileHeight / 2 : 0;
+            var yCartesian = (self.getTileHeight() * yIndex) + self.yOffset - (self.getTileHeight() / 2);
+            yCartesian += evenRow ? (self.getTileHeight() / 2) : 0;
             return yCartesian;
         },
 
@@ -148,9 +161,11 @@ tg = (function() {
                             self.redraw();
                             break;
                         case 109:
+                            self.scale = Math.max(self.scale - .05, .3);
                             self.redraw();
                             break;
                         case 107:
+                            self.scale = Math.min(self.scale + .05, 1);
                             self.redraw();
                             break;
                     }
@@ -158,7 +173,6 @@ tg = (function() {
                 self.resizeCanvas();
             }
 
-            self.blankImage.element.addEventListener('load', render);
             self.grassImage.element.addEventListener('load', render);
         }
     }
