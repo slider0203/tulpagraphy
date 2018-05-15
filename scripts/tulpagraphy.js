@@ -39,21 +39,68 @@ tg = (function() {
         }
     }
 
+    function TerrainViewModel() {
+        var self = this;
+        self.terrain;
+        self.selectedTerrain = 1;
+
+        self.initialize();
+    }
+
+    TerrainViewModel.prototype = {        
+        initialize: function() {
+            var self = this;
+            if (!self.terrain || !self.terrain.length) {
+                self.terrain = [
+                    new Terrain(0, 'Blank', '/images/terrain/blank/', 500, 1),
+                    new Terrain(1, 'Grass', '/images/terrain/grass/', 500, 1),
+                    new Terrain(2, 'Black', '/images/terrain/black/', 500, 1)
+                ]
+            }
+        },
+
+        getTerrainById: function(id) {
+            var self = this;
+            return self.terrain.find(item => item.id == id);
+        },
+
+        setSelectedTerrainId: function(id) {
+            var self = this;
+            self.selectedTerrain = id;
+        },
+
+        getSelectedTerrainId: function() {
+            var self = this;
+            return self.selectedTerrain;
+        },
+
+        loaded: function() {
+            var self = this;
+            let loaded = true;
+            self.terrain.forEach(terrain => {
+                if (!terrain.loaded()) {
+                    loaded = false;
+                    return;
+                }
+            });
+            return loaded;
+        }
+    }
+
     function MapViewModel(mapData) {
         var self = this;
         self.id = mapData.id;
         self.name = mapData.name;
-        self.canvas = document.getElementById('map');
-        self.context = self.canvas.getContext('2d');
+        self.canvas;
+        self.context;
         self.offset = {x: 0, y: 0};
         self.scale = 1;
         self.tileWidth = 300;
         self.tileHeight = 150;
         self.points = [{x: 0, y: .5}, {x: .25, y: 0}, {x: .75, y: 0}, {x: 1, y: .5}, {x: .75, y: 1}, {x: .25, y: 1}];
+        self.terrain = new TerrainViewModel();
 
         self.tiles = mapData.tiles;
-        self.blankImage = new MapImage('/images/terrain/blank/1.png');
-        self.grassImage = new MapImage('/images/terrain/grass/1.png');
     }
 
     MapViewModel.prototype = {
@@ -91,14 +138,20 @@ tg = (function() {
                      yMax: totalTiles.y - tileOffset.y };
         },
 
+        changeTerrain: function(id) {
+            var self = this;
+            self.terrain.setSelectedTerrainId(id);
+        },
+
         changeTile: function(event) {
             var self = this;
             var tileIndex = self.getTileIndex(event.offsetX, event.offsetY);
-            var tile = self.tiles.find(tile => tile.x == tileIndex.x && tile.y == tileIndex.y);
-            if (!tile) {
-                self.tiles.push({x: tileIndex.x, y: tileIndex.y, t: 'grass'})
+            var index = self.tiles.findIndex(tile => tile.x == tileIndex.x && tile.y == tileIndex.y);
+            if (index > -1) {
+                self.tiles[index].t = self.terrain.getSelectedTerrainId();
+            } else {
+                self.tiles.push({x: tileIndex.x, y: tileIndex.y, t: self.terrain.getSelectedTerrainId()})
             }
-            tile = {x: tileIndex.x, y: tileIndex.y, t: 'grass'};
             self.redraw();
             tg.saveMap({id: self.id, name: self.name, tiles: self.tiles})
         },
@@ -161,10 +214,10 @@ tg = (function() {
                     var isEvenRow = Math.abs(xIndex) % 2 == 1; // yes, if it's equal to 1, the first row is index 0, not index 1
                     var tile = self.tiles.find(tile => tile.x == xIndex && tile.y == yIndex);
                     if (tile) {
-                        self.context.drawImage(self.grassImage.element, self.getCartesianX(xIndex), self.getCartesianY(yIndex, isEvenRow),
+                        self.context.drawImage(self.terrain.getTerrainById(tile.t).images[0].element, self.getCartesianX(xIndex), self.getCartesianY(yIndex, isEvenRow),
                             self.getTileWidth(), self.getTileHeight());
                     } else {
-                        self.context.drawImage(self.blankImage.element, self.getCartesianX(xIndex), self.getCartesianY(yIndex, isEvenRow),
+                        self.context.drawImage(self.terrain.getTerrainById(0).images[0].element, self.getCartesianX(xIndex), self.getCartesianY(yIndex, isEvenRow),
                             self.getTileWidth(), self.getTileHeight());
                     }
                 }
@@ -183,44 +236,65 @@ tg = (function() {
             return yCartesian;
         },
 
-        initialize: function() {
+        bindActions: function() {
             var self = this;
             var tulpaEvent = new TulpaEvent();
-            function render() {
-                window.addEventListener('resize', self.resizeCanvas.bind(self), false);
-                self.canvas.addEventListener('mousedown', tulpaEvent.mouseDown.bind(tulpaEvent), false);
-                self.canvas.addEventListener('mousemove', tulpaEvent.mouseMove.bind(tulpaEvent, self.changeTile.bind(self), self.moveView.bind(self)), false);
-                self.canvas.addEventListener('mouseup', tulpaEvent.mouseUp.bind(tulpaEvent), false);
-                self.canvas.addEventListener('click', tulpaEvent.mouseClick.bind(tulpaEvent, self.changeTile.bind(self)), false);
-                self.canvas.addEventListener('contextmenu', function(e) {e.preventDefault();}, false);
-                document.onkeydown = function(e) {
-                    switch (e.keyCode) {
-                        case 37:
-                            self.moveView(5, 0);
-                            break;
-                        case 38:
-                            self.moveView(0, 5);
-                            break;
-                        case 39:
-                            self.moveView(-5, 0);
-                            break;
-                        case 40:
-                            self.moveView(0, -5);
-                            break;
-                        case 109:
-                            self.scale = Math.max(self.scale - .05, .3);
-                            self.redraw();
-                            break;
-                        case 107:
-                            self.scale = Math.min(self.scale + .05, 1);
-                            self.redraw();
-                            break;
-                    }
-                };
-                self.resizeCanvas();
-            }
+            window.addEventListener('resize', self.resizeCanvas.bind(self), false);
+            self.canvas.addEventListener('mousedown', tulpaEvent.mouseDown.bind(tulpaEvent), false);
+            self.canvas.addEventListener('mousemove', tulpaEvent.mouseMove.bind(tulpaEvent, self.changeTile.bind(self), self.moveView.bind(self)), false);
+            self.canvas.addEventListener('mouseup', tulpaEvent.mouseUp.bind(tulpaEvent), false);
+            self.canvas.addEventListener('click', tulpaEvent.mouseClick.bind(tulpaEvent, self.changeTile.bind(self)), false);
+            self.canvas.addEventListener('contextmenu', function(e) {e.preventDefault();}, false);
+            document.onkeydown = function(e) {
+                switch (e.keyCode) {
+                    case 37:
+                        self.moveView(5, 0);
+                        break;
+                    case 38:
+                        self.moveView(0, 5);
+                        break;
+                    case 39:
+                        self.moveView(-5, 0);
+                        break;
+                    case 40:
+                        self.moveView(0, -5);
+                        break;
+                    case 109:
+                        self.scale = Math.max(self.scale - .05, .3);
+                        self.redraw();
+                        break;
+                    case 107:
+                        self.scale = Math.min(self.scale + .05, 1);
+                        self.redraw();
+                        break;
+                }
+            };
+        },
 
-            self.grassImage.element.addEventListener('load', render);
+        initialize: function() {
+            var self = this;
+            var tulpagraphyContainer = document.getElementById('tulpagraphy');
+            self.canvas = document.createElement('canvas');
+            tulpagraphyContainer.appendChild(self.canvas);
+            self.context = self.canvas.getContext('2d');
+            var toolbar = document.createElement('div');
+            toolbar.setAttribute('id', 'toolbar');
+            self.terrain.terrain.forEach(function(item) {
+                var tool = document.createElement('img');
+                tool.setAttribute('src', item.imageDirectory + 'tool.png');
+                tool.addEventListener('click', self.changeTerrain.bind(self, item.id));
+                toolbar.appendChild(tool);
+            });
+            tulpagraphyContainer.appendChild(toolbar);
+
+            self.bindActions();
+
+            var loader = setInterval(function() {
+                if (self.terrain.loaded()) {
+                    clearInterval(loader);
+                    self.resizeCanvas();
+                }
+            }, 100);
         }
     }
 
@@ -239,6 +313,17 @@ tg = (function() {
     };
 
     Terrain.prototype = {
+        loaded: function() {
+            var self = this;
+            let loaded = true;
+            self.images.forEach(function(image) {
+                if (!image.loaded) {
+                    loaded = false;
+                    return;
+                }
+            });
+            return loaded;
+        }
     };
 
     function MapImage(url) {
@@ -247,11 +332,15 @@ tg = (function() {
         self.loaded = false;
         self.element = new Image();
         self.element.src = url;
-
-        var onLoaded = function () { self.loaded = true };
-
-        self.element.addEventListener('load', onLoaded);
+        self.element.addEventListener('load', self.onLoaded.bind(self));
     };
+
+    MapImage.prototype = {
+        onLoaded: function() {
+            var self = this;
+            self.loaded = true;
+        }
+    }
 
     function Tulpagraphy() {
         var self = this;
@@ -301,22 +390,6 @@ tg = (function() {
 
         clearMaps: function () {
             delete localStorage.maps;
-        },
-
-        getTerrains: function () {
-            if (!terrains || !terrains.length) {
-                this._initializeTerrains();
-            }
-
-            return terrains;
-        },
-
-        _initializeTerrains: function () {
-            terrains = [
-                new Terrain('black', 'Black', '/images/terrain/black/', 500, 1),
-                new Terrain('blank', 'Blank', '/images/terrain/blank/', 500, 1),
-                new Terrain('grass', 'Grass', '/images/terrain/grass/', 500, 1)
-            ];
         }
     };
     return new Tulpagraphy();
