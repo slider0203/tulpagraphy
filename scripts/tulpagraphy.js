@@ -39,15 +39,23 @@ tg = (function() {
         }
     }
 
-    function TerrainViewModel() {
+    function TerrainController(tiles, canvas, context) {
         var self = this;
+        self.tiles = tiles;
+        self.canvas = canvas;
+        self.context = context;
+        self.scale = 1;
+        self.tileWidth = 300;
+        self.tileHeight = 150;
+        self.points = [{x: 0, y: .5}, {x: .25, y: 0}, {x: .75, y: 0}, {x: 1, y: .5}, {x: .75, y: 1}, {x: .25, y: 1}];
         self.terrain;
         self.selectedTerrain = 1;
+        self.offset = {x: 0, y: 0};
 
         self.initialize();
     }
 
-    TerrainViewModel.prototype = {        
+    TerrainController.prototype = {
         initialize: function() {
             var self = this;
             if (!self.terrain || !self.terrain.length) {
@@ -59,6 +67,44 @@ tg = (function() {
             }
         },
 
+        terrainLoaded: function() {
+            var self = this;
+            var loaded = true;
+            self.terrain.forEach(terrain => {
+                if (!terrain.loaded()) {
+                    loaded = false;
+                    return;
+                }
+            });
+            return loaded;
+        },
+
+        getTileHeight: function() {
+            var self = this;
+            return self.tileHeight * self.scale;
+        },
+
+        getTileWidth: function() {
+            var self = this;
+            return self.tileWidth * self.scale;
+        },
+
+        getTiles: function() {
+            var self = this;
+            return self.tiles;
+        },
+
+        setScale: function(scale) {
+            var self = this;
+            self.scale = scale;
+        },
+
+        updateOffset: function(x, y) {
+            var self = this;
+            self.offset.x += x;
+            self.offset.y += y;
+        },
+        
         getTerrainById: function(id) {
             var self = this;
             return self.terrain.find(item => item.id == id);
@@ -74,60 +120,6 @@ tg = (function() {
             return self.selectedTerrain;
         },
 
-        loaded: function() {
-            var self = this;
-            let loaded = true;
-            self.terrain.forEach(terrain => {
-                if (!terrain.loaded()) {
-                    loaded = false;
-                    return;
-                }
-            });
-            return loaded;
-        }
-    }
-
-    function MapViewModel(mapData) {
-        var self = this;
-        self.id = mapData.id;
-        self.name = mapData.name;
-        self.canvas;
-        self.context;
-        self.offset = {x: 0, y: 0};
-        self.scale = 1;
-        self.tileWidth = 300;
-        self.tileHeight = 150;
-        self.points = [{x: 0, y: .5}, {x: .25, y: 0}, {x: .75, y: 0}, {x: 1, y: .5}, {x: .75, y: 1}, {x: .25, y: 1}];
-        self.terrain = new TerrainViewModel();
-
-        self.tiles = mapData.tiles;
-    }
-
-    MapViewModel.prototype = {
-        getTileHeight: function() {
-            var self = this;
-            return self.tileHeight * self.scale;
-        },
-
-        getTileWidth: function() {
-            var self = this;
-            return self.tileWidth * self.scale;
-        },
-
-        moveView: function(x, y) {
-            var self = this;
-            self.offset.x += x;
-            self.offset.y += y;
-            self.redraw();
-        },
-
-        resizeCanvas: function() {
-            var self = this;
-            self.canvas.width = window.innerWidth;
-            self.canvas.height = window.innerHeight;
-            self.redraw();
-        },
-
         getBounds: function() {
             var self = this;
             let tileOffset = self.getTileOffset();
@@ -138,22 +130,15 @@ tg = (function() {
                      yMax: totalTiles.y - tileOffset.y };
         },
 
-        changeTerrain: function(id) {
-            var self = this;
-            self.terrain.setSelectedTerrainId(id);
-        },
-
-        changeTile: function(event) {
+        changeTerrainTile: function(event) {
             var self = this;
             var tileIndex = self.getTileIndex(event.offsetX, event.offsetY);
             var index = self.tiles.findIndex(tile => tile.x == tileIndex.x && tile.y == tileIndex.y);
             if (index > -1) {
-                self.tiles[index].t = self.terrain.getSelectedTerrainId();
+                self.tiles[index].t = self.getSelectedTerrainId();
             } else {
-                self.tiles.push({x: tileIndex.x, y: tileIndex.y, t: self.terrain.getSelectedTerrainId()})
+                self.tiles.push({x: tileIndex.x, y: tileIndex.y, t: self.getSelectedTerrainId()})
             }
-            self.redraw();
-            tg.saveMap({id: self.id, name: self.name, tiles: self.tiles})
         },
 
         getTileIndex: function(x, y) {
@@ -205,25 +190,24 @@ tg = (function() {
             return { x: Math.ceil(self.offset.x / (.75 * self.getTileWidth())), y: Math.ceil(self.offset.y / self.getTileHeight()) };
         },
 
-        redraw: function() {
+        render: function() {
             var self = this;
-            self.context.clearRect(0, 0, self.canvas.width, self.canvas.height);
             var bounds = self.getBounds();
             for (var xIndex = bounds.xMin; xIndex < bounds.xMax; xIndex++) {
                 for (var yIndex = bounds.yMin; yIndex < bounds.yMax; yIndex++) {
                     var isEvenRow = Math.abs(xIndex) % 2 == 1; // yes, if it's equal to 1, the first row is index 0, not index 1
                     var tile = self.tiles.find(tile => tile.x == xIndex && tile.y == yIndex);
                     if (tile) {
-                        self.context.drawImage(self.terrain.getTerrainById(tile.t).images[0].element, self.getCartesianX(xIndex), self.getCartesianY(yIndex, isEvenRow),
+                        self.context.drawImage(self.getTerrainById(tile.t).images[0].element, self.getCartesianX(xIndex), self.getCartesianY(yIndex, isEvenRow),
                             self.getTileWidth(), self.getTileHeight());
                     } else {
-                        self.context.drawImage(self.terrain.getTerrainById(0).images[0].element, self.getCartesianX(xIndex), self.getCartesianY(yIndex, isEvenRow),
+                        self.context.drawImage(self.getTerrainById(0).images[0].element, self.getCartesianX(xIndex), self.getCartesianY(yIndex, isEvenRow),
                             self.getTileWidth(), self.getTileHeight());
                     }
                 }
             }
         },
-
+        
         getCartesianX: function(xIndex) {
             var self = this;
             return (.75 * self.getTileWidth() * xIndex) + self.offset.x - (self.getTileWidth() / 2);
@@ -234,6 +218,65 @@ tg = (function() {
             var yCartesian = (self.getTileHeight() * yIndex) + self.offset.y - (self.getTileHeight() / 2);
             yCartesian += evenRow ? (self.getTileHeight() / 2) : 0;
             return yCartesian;
+        }
+    }
+
+    function MapViewModel(mapData) {
+        var self = this;
+        self.id = mapData.id;
+        self.name = mapData.name;
+        self.canvas;
+        self.context;
+        self.scale = 1;
+        self.terrainController;
+
+        self.initialize(mapData.tiles);
+    }
+
+    MapViewModel.prototype = {
+        moveView: function(x, y) {
+            var self = this;
+            self.terrainController.updateOffset(x, y);
+            self.render();
+        },
+
+        resizeCanvas: function() {
+            var self = this;
+            self.canvas.width = window.innerWidth;
+            self.canvas.height = window.innerHeight;
+            self.render();
+        },
+
+        changeTerrain: function(id) {
+            var self = this;
+            self.terrainController.setSelectedTerrainId(id);
+        },
+
+        changeTile: function(event) {
+            var self = this;
+            this.terrainController.changeTerrainTile(event);
+            self.render();
+            tg.saveMap({id: self.id, name: self.name, tiles: self.terrainController.getTiles()})
+        },
+
+        render: function() {
+            var self = this;
+            self.context.clearRect(0, 0, self.canvas.width, self.canvas.height);
+            self.terrainController.render();
+        },
+
+        zoomIn: function() {
+            var self = this;
+            self.scale = Math.min(self.scale + .05, 1);
+            self.terrainController.setScale(self.scale);
+            self.render();
+        },
+
+        zoomOut: function() {
+            var self = this;
+            self.scale = Math.max(self.scale - .05, .3);
+            self.terrainController.setScale(self.scale);
+            self.render();
         },
 
         bindActions: function() {
@@ -260,18 +303,16 @@ tg = (function() {
                         self.moveView(0, -5);
                         break;
                     case 109:
-                        self.scale = Math.max(self.scale - .05, .3);
-                        self.redraw();
+                        self.zoomOut();
                         break;
                     case 107:
-                        self.scale = Math.min(self.scale + .05, 1);
-                        self.redraw();
+                        self.zoomIn();
                         break;
                 }
             };
         },
 
-        initialize: function() {
+        initialize: function(tiles) {
             var self = this;
             var tulpagraphyContainer = document.getElementById('tulpagraphy');
             self.canvas = document.createElement('canvas');
@@ -279,7 +320,8 @@ tg = (function() {
             self.context = self.canvas.getContext('2d');
             var toolbar = document.createElement('div');
             toolbar.setAttribute('id', 'toolbar');
-            self.terrain.terrain.forEach(function(item) {
+            self.terrainController = new TerrainController(tiles, self.canvas, self.context);
+            self.terrainController.terrain.forEach(function(item) {
                 var tool = document.createElement('img');
                 tool.setAttribute('src', item.imageDirectory + 'tool.png');
                 tool.addEventListener('click', self.changeTerrain.bind(self, item.id));
@@ -290,7 +332,7 @@ tg = (function() {
             self.bindActions();
 
             var loader = setInterval(function() {
-                if (self.terrain.loaded()) {
+                if (self.terrainController.terrainLoaded()) {
                     clearInterval(loader);
                     self.resizeCanvas();
                 }
@@ -349,7 +391,7 @@ tg = (function() {
 
     Tulpagraphy.prototype = {
         initializeMap: function(id) {
-            this.mapViewModel = new MapViewModel(this.getMapById(id)).initialize();
+            this.mapViewModel = new MapViewModel(this.getMapById(id));
         },
 
         getMaps: function () {
