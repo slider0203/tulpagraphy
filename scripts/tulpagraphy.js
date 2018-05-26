@@ -97,9 +97,20 @@ tg = (function() {
             self.roads.push([{x: x - self.offset.x, y: y - self.offset.y, control: false}]);
         },
 
+        getControlPoint: function(x, y) {
+            var self = this;
+            var lastAnchor = self.roads[self.selectedRoad][self.roads[self.selectedRoad].length - 1];
+            var dx = x - self.offset.x + (lastAnchor.x + self.offset.x - x) / 2;
+            var dy = y - self.offset.y + (lastAnchor.y + self.offset.y - y) / 2;
+            console.log(dx, dy);
+            console.log(lastAnchor.x, lastAnchor.y);
+            return {x: dx, y: dy};
+        },
+
         addAnchor: function(x, y) {
             var self = this;
-            self.roads[self.selectedRoad].push({x: Math.max(x - self.offset.x - 200, 0), y: Math.max(y - self.offset.y - 50, 0), control: true});
+            var points = self.getControlPoint(x, y);
+            self.roads[self.selectedRoad].push({x: points.x, y: points.y, control: true});
             self.roads[self.selectedRoad].push({x: x - self.offset.x, y: y - self.offset.y, control: false});
         },
 
