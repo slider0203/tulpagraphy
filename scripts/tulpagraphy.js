@@ -80,6 +80,17 @@ tg = (function() {
             return self.roads.filter(road => road.length > 1);
         },
 
+        clearSelectedRoad: function() {
+            var self = this;
+            self.selectedRoad = null;
+        },
+
+        deleteSelectedRoad: function() {
+            var self = this;
+            self.roads.splice(self.selectedRoad, 1);
+            self.selectedRoad = null;
+        },
+
         startRoad: function(x, y) {
             var self = this;
             self.selectedRoad = self.roads.length;
@@ -234,7 +245,7 @@ tg = (function() {
                         self.selectedRoad = r;
                     }
                     else {
-                        self.selectedRoad = null;
+                        self.clearSelectedRoad()
                     }
                 }
                 else if (self.selectedRoad !== null) {
@@ -462,6 +473,22 @@ tg = (function() {
     }
 
     MapViewModel.prototype = {
+        clearSelected: function() {
+            var self = this;
+            if (self.activeLayer == 'roads') {
+                self.roadController.clearSelectedRoad();
+                self.render();
+            }
+        },
+
+        deleteSelected: function() {
+            var self = this;
+            if (self.activeLayer == 'roads') {
+                self.roadController.deleteSelectedRoad();
+                self.render();
+            }
+        },
+
         mouseDownPrimary: function(event) {
             var self = this;
             if (self.activeLayer == 'roads') {
@@ -561,8 +588,14 @@ tg = (function() {
             self.canvas.addEventListener('mouseup', tulpaEvent.mouseUp.bind(tulpaEvent, self.mouseUpPrimary.bind(self), self.mouseUpSecondary.bind(self)), false);
             self.canvas.addEventListener('click', tulpaEvent.mouseClick.bind(tulpaEvent, self.mouseClickPrimary.bind(self)), false);
             self.canvas.addEventListener('contextmenu', tulpaEvent.mouseRightClick.bind(tulpaEvent, self.mouseClickSecondary.bind(self)), false);
-            document.onkeydown = function(e) {
-                switch (e.keyCode) {
+            document.onkeydown = function(event) {
+                switch (event.keyCode) {
+                    case 27:
+                        self.clearSelected();
+                        break;
+                    case 46:
+                        self.deleteSelected();
+                        break;
                     case 37:
                         self.moveView(5, 0);
                         break;
