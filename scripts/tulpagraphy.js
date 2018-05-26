@@ -43,16 +43,224 @@ tg = (function() {
             return false;
         },
 
-        mouseClick: function(primaryCallback, secondaryCallback, event) {
+        mouseClick: function(callback, event) {
             var self = this;
-            if (self.button == 1) {
-                primaryCallback(event);
-            }
-            if (self.button == 2) {
-                secondaryCallback(event);
-            }
+            callback(event);
             event.preventDefault();
             return false;
+        },
+
+        mouseRightClick: function(callback, event) {
+            var self = this;
+            callback(event);
+            event.preventDefault();
+            return false;
+        }
+    }
+
+    function RoadController(roads, canvas, context) {
+        var self = this;
+        self.roads = roads;
+        self.canvas = canvas;
+        self.context = context;
+        self.selectedPoint = null;
+        self.selectedRoad = null;
+        self.style = {
+            curve:	{ width: 6, color: "#333" },
+            cpline:	{ width: 1, color: "#C00" },
+            point: { radius: 10, width: 2, color: "#900", fill: "rgba(200,200,200,0.5)", arc1: 0, arc2: 2 * Math.PI }
+        }
+        self.offset = {x: 0, y: 0};
+    }
+
+    RoadController.prototype = {
+        getRoads: function() {
+            var self = this;
+            // Remove all roads that consist of a single point
+            return self.roads.filter(road => road.length > 1);
+        },
+
+        startRoad: function(x, y) {
+            var self = this;
+            self.selectedRoad = self.roads.length;
+            self.roads.push([{x: x - self.offset.x, y: y - self.offset.y, control: false}]);
+        },
+
+        addAnchor: function(x, y) {
+            var self = this;
+            self.roads[self.selectedRoad].push({x: Math.max(x - self.offset.x - 200, 0), y: Math.max(y - self.offset.y - 50, 0), control: true});
+            self.roads[self.selectedRoad].push({x: x - self.offset.x, y: y - self.offset.y, control: false});
+        },
+
+        deleteAnchor: function(event, callback) {
+            var self = this;
+            self.getPointInSelectedRoad(event.x, event.y);
+            if (self.selectedPoint !== null) {
+                self.roads[self.selectedRoad].splice(Math.max(self.selectedPoint - 1, 0), 2);
+                if (self.roads[self.selectedRoad].length === 0) {
+                    self.roads.splice(self.selectedRoad, 1);
+                    self.selectedRoad = null;
+                }
+                self.selectedPoint = null;
+                callback();
+            }
+        },
+        
+        updateOffset: function(x, y) {
+            var self = this;
+            self.offset.x += x;
+            self.offset.y += y;
+        },
+
+        render: function() {
+            var self = this;
+            if (self.roads.length > 0) {
+                self.context.save();
+                self.context.lineCap = "round";
+                self.context.lineJoin = "round";
+                self.drawRoads();
+                self.drawControlLines();
+                self.drawInteractionPoints();
+                self.context.restore();                    
+            }
+        },
+
+        drawRoads: function() {
+            var self = this;
+          	self.context.setLineDash([5, 15]);
+            self.context.lineWidth = self.style.curve.width;
+            self.context.strokeStyle = self.style.curve.color;
+            for (var r in self.roads) {
+                self.context.beginPath();
+                self.context.moveTo(self.roads[r][0].x + self.offset.x, self.roads[r][0].y + self.offset.y);
+    
+                var control;
+                
+                for(var i = 1; i < self.roads[r].length; i++) {
+                  if (self.roads[r][i].control) {
+                    control = self.roads[r][i]
+                  }
+                  else {
+                    self.context.quadraticCurveTo(control.x + self.offset.x, control.y + self.offset.y, self.roads[r][i].x + self.offset.x, self.roads[r][i].y + self.offset.y);
+                  }
+                }
+                self.context.stroke();    
+            }
+            self.context.setLineDash([]);
+        },
+
+        drawControlLines: function() {
+            var self = this;
+            if (self.selectedRoad !== null) {
+                self.context.lineWidth = self.style.cpline.width;
+                self.context.strokeStyle = self.style.cpline.color;
+                self.context.beginPath();
+                self.context.moveTo(self.roads[self.selectedRoad][0].x + self.offset.x, self.roads[self.selectedRoad][0].y + self.offset.y);
+    
+                for(var i = 1; i < self.roads[self.selectedRoad].length; i++) {
+                    self.context.lineTo(self.roads[self.selectedRoad][i].x + self.offset.x, self.roads[self.selectedRoad][i].y + self.offset.y);
+                }
+    
+                self.context.stroke();    
+            }
+        },
+
+        drawInteractionPoints: function() {
+            var self = this;
+            if (self.selectedRoad !== null) {
+                self.context.lineWidth = self.style.point.width;
+                self.context.strokeStyle = self.style.point.color;
+                self.context.fillStyle = self.style.point.fill;
+                for (var p in self.roads[self.selectedRoad]) {
+                    self.context.beginPath();
+                    self.context.arc(self.roads[self.selectedRoad][p].x + self.offset.x, self.roads[self.selectedRoad][p].y + self.offset.y, self.style.point.radius,
+                        self.style.point.arc1, self.style.point.arc2, true);
+                    self.context.fill();
+                    self.context.stroke();
+                }
+            }
+        },
+
+        getPointInSelectedRoad: function(x, y) {
+            var self = this;
+            var dx;
+            var dy;
+            for (var p in self.roads[self.selectedRoad]) {
+                dx = self.roads[self.selectedRoad][p].x + self.offset.x - x;
+                dy = self.roads[self.selectedRoad][p].y + self.offset.y - y;
+                if ((dx * dx) + (dy * dy) < self.style.point.radius * self.style.point.radius) {
+                    self.selectedPoint = p;
+                    return;
+                }
+            }
+        },
+
+        getRoadByPointInPath: function(x, y) {
+            var self = this;
+            for (var r in self.roads) {
+                self.context.lineWidth = self.style.curve.width;
+                self.context.beginPath();
+                self.context.moveTo(self.roads[r][0].x + self.offset.x, self.roads[r][0].y + self.offset.y);
+    
+                var control;
+                
+                for(var i = 1; i < self.roads[r].length; i++) {
+                  if (self.roads[r][i].control) {
+                    control = self.roads[r][i]
+                  }
+                  else {
+                    self.context.quadraticCurveTo(control.x + self.offset.x, control.y + self.offset.y, self.roads[r][i].x + self.offset.x, self.roads[r][i].y + self.offset.y);
+                  }
+                }
+                if (self.context.isPointInStroke(event.x, event.y)) {
+                    return r;
+                }
+            }
+            return null;
+        },
+
+        onMouseDown: function(event, callback) {
+            var self = this;
+            if (self.selectedRoad !== null) {
+                self.getPointInSelectedRoad(event.x, event.y);
+                if (self.selectedPoint) {
+                    self.canvas.style.cursor = "move";
+                }
+            }
+            if (!self.selectedPoint) {
+                var r = self.getRoadByPointInPath(event.x, event.y);
+                if (r !== null) {
+                    if (self.selectedRoad !== r) {
+                        self.selectedRoad = r;
+                    }
+                    else {
+                        self.selectedRoad = null;
+                    }
+                }
+                else if (self.selectedRoad !== null) {
+                    self.addAnchor(event.x, event.y);
+                }
+                else {
+                    self.startRoad(event.x, event.y);
+                }
+            }
+            callback();
+        },
+
+        onMouseMove: function(event, callback) {
+            var self = this;
+            if (self.selectedPoint) {
+                self.roads[self.selectedRoad][self.selectedPoint].x += event.movementX;
+                self.roads[self.selectedRoad][self.selectedPoint].y += event.movementY;
+                callback();
+            }
+        },
+
+        onMouseUp: function(event, callback) {
+            var self = this;
+            self.selectedPoint = null;
+            self.canvas.style.cursor = "default";
+            callback();
         }
     }
 
@@ -147,7 +355,7 @@ tg = (function() {
                      yMax: totalTiles.y - tileOffset.y };
         },
 
-        changeTerrainTile: function(event) {
+        changeTerrainTile: function(event, callback) {
             var self = this;
             var tileIndex = self.getTileIndex(event.offsetX, event.offsetY);
             var index = self.tiles.findIndex(tile => tile.x == tileIndex.x && tile.y == tileIndex.y);
@@ -156,6 +364,7 @@ tg = (function() {
             } else {
                 self.tiles.push({x: tileIndex.x, y: tileIndex.y, t: self.getSelectedTerrainId()})
             }
+            callback();
         },
 
         getTileIndex: function(x, y) {
@@ -245,14 +454,19 @@ tg = (function() {
         self.canvas;
         self.context;
         self.scale = 1;
-        self.activeLayer = 'terrain';
+        self.activeLayer = 'roads';
         self.terrainController;
+        self.roadController;
 
-        self.initialize(mapData.tiles);
+        self.initialize(mapData.tiles, mapData.roads);
     }
 
     MapViewModel.prototype = {
         mouseDownPrimary: function(event) {
+            var self = this;
+            if (self.activeLayer == 'roads') {
+                self.roadController.onMouseDown(event, self.mapUpdated.bind(self));
+            }
         },
 
         mouseDownSecondary: function() {
@@ -261,18 +475,23 @@ tg = (function() {
         mouseMovePrimary: function(event) {
             var self = this;
             if (self.activeLayer == 'terrain') {
-                self.changeTile(event);
+                self.terrainController.changeTerrainTile(event, self.mapUpdated.bind(self));
+            }
+            if (self.activeLayer == 'roads') {
+                self.roadController.onMouseMove(event, self.render.bind(self));
             }
         },
 
         mouseMoveSecondary: function() {
             var self = this;
-            if (self.activeLayer == 'terrain') {
-                self.moveView(event.movementX, event.movementY);
-            }
+            self.moveView(event.movementX, event.movementY);
         },
 
         mouseUpPrimary: function(event) {
+            var self = this;
+            if (self.activeLayer == 'roads') {
+                self.roadController.onMouseUp(event, self.mapUpdated.bind(self));
+            }
         },
 
         mouseUpSecondary: function() {
@@ -286,11 +505,16 @@ tg = (function() {
         },
 
         mouseClickSecondary: function() {
+            var self = this;
+            if (self.activeLayer == 'roads') {
+                self.roadController.deleteAnchor(event, self.mapUpdated.bind(self));
+            }
         },
 
         moveView: function(x, y) {
             var self = this;
             self.terrainController.updateOffset(x, y);
+            self.roadController.updateOffset(x, y);
             self.render();
         },
 
@@ -301,22 +525,17 @@ tg = (function() {
             self.render();
         },
 
-        changeTerrain: function(id) {
+        mapUpdated: function() {
             var self = this;
-            self.terrainController.setSelectedTerrainId(id);
-        },
-
-        changeTile: function(event) {
-            var self = this;
-            self.terrainController.changeTerrainTile(event);
             self.render();
-            tg.saveMap({id: self.id, name: self.name, tiles: self.terrainController.getTiles()})
+            tg.saveMap({id: self.id, name: self.name, tiles: self.terrainController.getTiles(), roads: self.roadController.getRoads()});
         },
 
         render: function() {
             var self = this;
             self.context.clearRect(0, 0, self.canvas.width, self.canvas.height);
             self.terrainController.render();
+            self.roadController.render();
         },
 
         zoomIn: function() {
@@ -340,8 +559,8 @@ tg = (function() {
             self.canvas.addEventListener('mousedown', tulpaEvent.mouseDown.bind(tulpaEvent, self.mouseDownPrimary.bind(self), self.mouseDownSecondary.bind(self)), false);
             self.canvas.addEventListener('mousemove', tulpaEvent.mouseMove.bind(tulpaEvent, self.mouseMovePrimary.bind(self), self.mouseMoveSecondary.bind(self)), false);
             self.canvas.addEventListener('mouseup', tulpaEvent.mouseUp.bind(tulpaEvent, self.mouseUpPrimary.bind(self), self.mouseUpSecondary.bind(self)), false);
-            self.canvas.addEventListener('click', tulpaEvent.mouseClick.bind(tulpaEvent, self.mouseClickPrimary.bind(self), self.mouseClickSecondary.bind(self)), false);
-            self.canvas.addEventListener('contextmenu', function(e) {e.preventDefault();}, false);
+            self.canvas.addEventListener('click', tulpaEvent.mouseClick.bind(tulpaEvent, self.mouseClickPrimary.bind(self)), false);
+            self.canvas.addEventListener('contextmenu', tulpaEvent.mouseRightClick.bind(tulpaEvent, self.mouseClickSecondary.bind(self)), false);
             document.onkeydown = function(e) {
                 switch (e.keyCode) {
                     case 37:
@@ -366,7 +585,7 @@ tg = (function() {
             };
         },
 
-        initialize: function(tiles) {
+        initialize: function(tiles, roads) {
             var self = this;
             var tulpagraphyContainer = document.getElementById('tulpagraphy');
             self.canvas = document.createElement('canvas');
@@ -378,9 +597,10 @@ tg = (function() {
             self.terrainController.terrain.forEach(function(item) {
                 var tool = document.createElement('img');
                 tool.setAttribute('src', item.imageDirectory + 'tool.png');
-                tool.addEventListener('click', self.changeTerrain.bind(self, item.id));
+                tool.addEventListener('click', self.terrainController.setSelectedTerrainId.bind(self.terrainController, item.id));
                 toolbar.appendChild(tool);
             });
+            self.roadController = new RoadController(roads, self.canvas, self.context);
             tulpagraphyContainer.appendChild(toolbar);
 
             self.bindActions();
