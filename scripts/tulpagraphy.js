@@ -65,6 +65,7 @@ tg = (function() {
         self.context = context;
         self.selectedPoint = null;
         self.selectedRoad = null;
+        self.scale = 1;
         self.style = {
             curve:	{ width: 6, color: "#333" },
             cpline:	{ width: 1, color: "#C00" },
@@ -78,6 +79,11 @@ tg = (function() {
             var self = this;
             // Remove all roads that consist of a single point
             return self.roads.filter(road => road.length > 1);
+        },
+
+        setScale: function(scale) {
+            var self = this;
+            self.scale = scale;
         },
 
         clearSelectedRoad: function() {
@@ -94,29 +100,81 @@ tg = (function() {
         startRoad: function(x, y) {
             var self = this;
             self.selectedRoad = self.roads.length;
-            self.roads.push([{x: x - self.offset.x, y: y - self.offset.y, control: false}]);
-        },
-
-        getControlPoint: function(x, y) {
-            var self = this;
-            var lastAnchor = self.roads[self.selectedRoad][self.roads[self.selectedRoad].length - 1];
-            var dx = x - self.offset.x + (lastAnchor.x + self.offset.x - x) / 2;
-            var dy = y - self.offset.y + (lastAnchor.y + self.offset.y - y) / 2;
-            console.log(dx, dy);
-            console.log(lastAnchor.x, lastAnchor.y);
-            return {x: dx, y: dy};
+            self.roads.push([{x: (x - self.offset.x) / self.scale, y: (y - self.offset.y) / self.scale, control: false}]);
         },
 
         addAnchor: function(x, y) {
             var self = this;
-            var points = self.getControlPoint(x, y);
-            self.roads[self.selectedRoad].push({x: points.x, y: points.y, control: true});
-            self.roads[self.selectedRoad].push({x: x - self.offset.x, y: y - self.offset.y, control: false});
+            var controlPoint = self.calculateNewControlPointLocation(x, y, self.roads[self.selectedRoad].length - 1);
+            self.roads[self.selectedRoad].push({x: controlPoint.x, y: controlPoint.y, control: true});
+            self.roads[self.selectedRoad].push({x: (x - self.offset.x) / self.scale, y: (y - self.offset.y) / self.scale, control: false});
         },
 
-        deleteAnchor: function(event, callback) {
+        calculateNewControlPointLocation: function(x, y, index) {
             var self = this;
-            self.getPointInSelectedRoad(event.x, event.y);
+            var anchor = self.roads[self.selectedRoad][index];
+            var cpx = (x - self.offset.x) / self.scale + (anchor.x + (self.offset.x - x) / self.scale) / 2;
+            var cpy = (y - self.offset.y) / self.scale + (anchor.y + (self.offset.y - y) / self.scale) / 2;
+            return {x: cpx, y: cpy};
+        },
+
+        isPointOnSelectedPath: function(x, y) {
+            var self = this;
+            self.drawRoad(self.roads[self.selectedRoad]);
+            return self.context.isPointInStroke(x, y);
+        },
+
+        drawRoad: function(road) {
+            var self = this;
+            self.context.lineWidth = self.style.curve.width * self.scale;
+            self.context.beginPath();
+            self.context.moveTo(road[0].x * self.scale + self.offset.x, road[0].y * self.scale + self.offset.y);
+
+            var control;
+            for(var i = 1; i < road.length; i++) {
+                if (road[i].control) {
+                    control = road[i]
+                }
+                else {
+                    self.context.quadraticCurveTo(control.x * self.scale + self.offset.x, control.y * self.scale + self.offset.y,
+                        road[i].x * self.scale + self.offset.x, road[i].y * self.scale + self.offset.y);
+                }
+            }
+        },
+
+        drawRoadSegment: function(origin, control, end) {
+            var self = this;
+            self.context.lineWidth = self.style.curve.width * self.scale;
+            self.context.beginPath();
+            self.context.moveTo(origin.x * self.scale + self.offset.x, origin.y * self.scale + self.offset.y);
+            self.context.quadraticCurveTo(control.x * self.scale + self.offset.x, control.y * self.scale + self.offset.y,
+                end.x * self.scale + self.offset.x, end.y * self.scale + self.offset.y);
+        },
+
+        insertAnchorOnSegment: function(x, y) {
+            var self = this;
+            var road = self.roads[self.selectedRoad];
+            for(var i = 2; i < road.length; i += 2) {
+                self.drawRoadSegment(road[i - 2], road[i - 1], road[i]);
+
+                if (self.context.isPointInStroke(x, y)) {
+                    var controlPoint = self.calculateNewControlPointLocation(x, y, i - 2);
+                    self.roads[self.selectedRoad].splice(i - 1, 0, {x: controlPoint.x, y: controlPoint.y, control: true});
+                    self.roads[self.selectedRoad].splice(i, 0, {x: (x - self.offset.x) / self.scale, y: (y - self.offset.y) / self.scale, control: false});
+                    return;
+                }
+            }
+        },
+
+        insertAnchor: function(x, y) {
+            var self = this;
+            if (self.isPointOnSelectedPath) {
+                self.insertAnchorOnSegment(x, y)
+            }
+        },
+
+        deleteAnchor: function() {
+            var self = this;
             if (self.selectedPoint !== null) {
                 self.roads[self.selectedRoad].splice(Math.max(self.selectedPoint - 1, 0), 2);
                 if (self.roads[self.selectedRoad].length === 0) {
@@ -124,7 +182,6 @@ tg = (function() {
                     self.selectedRoad = null;
                 }
                 self.selectedPoint = null;
-                callback();
             }
         },
         
@@ -149,23 +206,10 @@ tg = (function() {
 
         drawRoads: function() {
             var self = this;
-          	self.context.setLineDash([5, 15]);
-            self.context.lineWidth = self.style.curve.width;
+          	self.context.setLineDash([5 * self.scale, 15 * self.scale]);
             self.context.strokeStyle = self.style.curve.color;
             for (var r in self.roads) {
-                self.context.beginPath();
-                self.context.moveTo(self.roads[r][0].x + self.offset.x, self.roads[r][0].y + self.offset.y);
-    
-                var control;
-                
-                for(var i = 1; i < self.roads[r].length; i++) {
-                  if (self.roads[r][i].control) {
-                    control = self.roads[r][i]
-                  }
-                  else {
-                    self.context.quadraticCurveTo(control.x + self.offset.x, control.y + self.offset.y, self.roads[r][i].x + self.offset.x, self.roads[r][i].y + self.offset.y);
-                  }
-                }
+                self.drawRoad(self.roads[r]);
                 self.context.stroke();    
             }
             self.context.setLineDash([]);
@@ -177,10 +221,10 @@ tg = (function() {
                 self.context.lineWidth = self.style.cpline.width;
                 self.context.strokeStyle = self.style.cpline.color;
                 self.context.beginPath();
-                self.context.moveTo(self.roads[self.selectedRoad][0].x + self.offset.x, self.roads[self.selectedRoad][0].y + self.offset.y);
+                self.context.moveTo(self.roads[self.selectedRoad][0].x * self.scale + self.offset.x, self.roads[self.selectedRoad][0].y * self.scale + self.offset.y);
     
                 for(var i = 1; i < self.roads[self.selectedRoad].length; i++) {
-                    self.context.lineTo(self.roads[self.selectedRoad][i].x + self.offset.x, self.roads[self.selectedRoad][i].y + self.offset.y);
+                    self.context.lineTo(self.roads[self.selectedRoad][i].x * self.scale + self.offset.x, self.roads[self.selectedRoad][i].y * self.scale + self.offset.y);
                 }
     
                 self.context.stroke();    
@@ -195,7 +239,8 @@ tg = (function() {
                 self.context.fillStyle = self.style.point.fill;
                 for (var p in self.roads[self.selectedRoad]) {
                     self.context.beginPath();
-                    self.context.arc(self.roads[self.selectedRoad][p].x + self.offset.x, self.roads[self.selectedRoad][p].y + self.offset.y, self.style.point.radius,
+                    self.context.arc(self.roads[self.selectedRoad][p].x * self.scale + self.offset.x,
+                        self.roads[self.selectedRoad][p].y * self.scale + self.offset.y, self.style.point.radius,
                         self.style.point.arc1, self.style.point.arc2, true);
                     self.context.fill();
                     self.context.stroke();
@@ -208,8 +253,8 @@ tg = (function() {
             var dx;
             var dy;
             for (var p in self.roads[self.selectedRoad]) {
-                dx = self.roads[self.selectedRoad][p].x + self.offset.x - x;
-                dy = self.roads[self.selectedRoad][p].y + self.offset.y - y;
+                dx = self.roads[self.selectedRoad][p].x * self.scale + self.offset.x - x;
+                dy = self.roads[self.selectedRoad][p].y * self.scale + self.offset.y - y;
                 if ((dx * dx) + (dy * dy) < self.style.point.radius * self.style.point.radius) {
                     self.selectedPoint = p;
                     return;
@@ -221,19 +266,7 @@ tg = (function() {
             var self = this;
             for (var r in self.roads) {
                 self.context.lineWidth = self.style.curve.width;
-                self.context.beginPath();
-                self.context.moveTo(self.roads[r][0].x + self.offset.x, self.roads[r][0].y + self.offset.y);
-    
-                var control;
-                
-                for(var i = 1; i < self.roads[r].length; i++) {
-                  if (self.roads[r][i].control) {
-                    control = self.roads[r][i]
-                  }
-                  else {
-                    self.context.quadraticCurveTo(control.x + self.offset.x, control.y + self.offset.y, self.roads[r][i].x + self.offset.x, self.roads[r][i].y + self.offset.y);
-                  }
-                }
+                self.drawRoad(self.roads[r]);
                 if (self.context.isPointInStroke(event.x, event.y)) {
                     return r;
                 }
@@ -272,8 +305,8 @@ tg = (function() {
         onMouseMove: function(event, callback) {
             var self = this;
             if (self.selectedPoint) {
-                self.roads[self.selectedRoad][self.selectedPoint].x += event.movementX;
-                self.roads[self.selectedRoad][self.selectedPoint].y += event.movementY;
+                self.roads[self.selectedRoad][self.selectedPoint].x += event.movementX / self.scale;
+                self.roads[self.selectedRoad][self.selectedPoint].y += event.movementY / self.scale;
                 callback();
             }
         },
@@ -282,6 +315,17 @@ tg = (function() {
             var self = this;
             self.selectedPoint = null;
             self.canvas.style.cursor = "default";
+            callback();
+        },
+
+        onRightClick: function(event, callback) {
+            var self = this;
+            self.getPointInSelectedRoad(event.x, event.y);
+            if (self.selectedPoint !== null) {
+                self.deleteAnchor();
+            } else {
+                self.insertAnchor(event.x, event.y);
+            }
             callback();
         }
     }
@@ -496,7 +540,7 @@ tg = (function() {
             var self = this;
             if (self.activeLayer == 'roads') {
                 self.roadController.deleteSelectedRoad();
-                self.render();
+                self.mapUpdated();
             }
         },
 
@@ -545,7 +589,7 @@ tg = (function() {
         mouseClickSecondary: function() {
             var self = this;
             if (self.activeLayer == 'roads') {
-                self.roadController.deleteAnchor(event, self.mapUpdated.bind(self));
+                self.roadController.onRightClick(event, self.mapUpdated.bind(self));
             }
         },
 
@@ -580,6 +624,7 @@ tg = (function() {
             var self = this;
             self.scale = Math.min(self.scale + .05, 1);
             self.terrainController.setScale(self.scale);
+            self.roadController.setScale(self.scale);
             self.render();
         },
 
@@ -587,6 +632,7 @@ tg = (function() {
             var self = this;
             self.scale = Math.max(self.scale - .05, .3);
             self.terrainController.setScale(self.scale);
+            self.roadController.setScale(self.scale);
             self.render();
         },
 
@@ -728,7 +774,7 @@ tg = (function() {
 
         createNewMap: function() {
             var id = this.getNextId();
-            localStorage.setItem(id, JSON.stringify({id: id, name: 'untitled', tiles: []}));
+            localStorage.setItem(id, JSON.stringify({id: id, name: 'untitled', tiles: [], roads: []}));
             return id;
         },
 
