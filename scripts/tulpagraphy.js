@@ -5,36 +5,53 @@ tg = (function() {
     }
 
     TulpaEvent.prototype = {
-        mouseDown: function(event) {
+        mouseDown: function(primaryCallback, secondaryCallback, event) {
             var self = this;
-            event.preventDefault();
             self.button = event.buttons;
-            return false;
-        },
-
-        mouseUp: function(event) {
-            var self = this;
-            event.preventDefault();
-            self.button = 0;
-            return false;
-        },
-
-        mouseClick: function(callback, event) {
-            var self = this;
-            callback(event);
-            event.preventDefault();
-            return false;
-        },
-
-        mouseMove: function(primaryCallback, secondaryCallback, event) {
-            var self = this;
-            event.preventDefault();
             if (self.button == 1) {
                 primaryCallback(event);
             }
             if (self.button == 2) {
-                secondaryCallback(event.movementX, event.movementY);
+                secondaryCallback(event);
             }
+            event.preventDefault();
+            return false;
+        },
+        
+        mouseMove: function(primaryCallback, secondaryCallback, event) {
+            var self = this;
+            if (self.button == 1) {
+                primaryCallback(event);
+            }
+            if (self.button == 2) {
+                secondaryCallback(event);
+            }
+            event.preventDefault();
+            return false;
+        },
+
+        mouseUp: function(primaryCallback, secondaryCallback, event) {
+            var self = this;
+            if (self.button == 1) {
+                primaryCallback(event);
+            }
+            if (self.button == 2) {
+                secondaryCallback(event);
+            }
+            self.button = 0;
+            event.preventDefault();
+            return false;
+        },
+
+        mouseClick: function(primaryCallback, secondaryCallback, event) {
+            var self = this;
+            if (self.button == 1) {
+                primaryCallback(event);
+            }
+            if (self.button == 2) {
+                secondaryCallback(event);
+            }
+            event.preventDefault();
             return false;
         }
     }
@@ -228,12 +245,49 @@ tg = (function() {
         self.canvas;
         self.context;
         self.scale = 1;
+        self.activeLayer = 'terrain';
         self.terrainController;
 
         self.initialize(mapData.tiles);
     }
 
     MapViewModel.prototype = {
+        mouseDownPrimary: function(event) {
+        },
+
+        mouseDownSecondary: function() {
+        },
+
+        mouseMovePrimary: function(event) {
+            var self = this;
+            if (self.activeLayer == 'terrain') {
+                self.changeTile(event);
+            }
+        },
+
+        mouseMoveSecondary: function() {
+            var self = this;
+            if (self.activeLayer == 'terrain') {
+                self.moveView(event.movementX, event.movementY);
+            }
+        },
+
+        mouseUpPrimary: function(event) {
+        },
+
+        mouseUpSecondary: function() {
+        },
+
+        mouseClickPrimary: function(event) {
+            var self = this;
+            if (self.activeLayer == 'terrain') {
+                self.changeTile(event);
+            }
+        },
+
+        mouseClickSecondary: function() {
+        },
+
         moveView: function(x, y) {
             var self = this;
             self.terrainController.updateOffset(x, y);
@@ -254,7 +308,7 @@ tg = (function() {
 
         changeTile: function(event) {
             var self = this;
-            this.terrainController.changeTerrainTile(event);
+            self.terrainController.changeTerrainTile(event);
             self.render();
             tg.saveMap({id: self.id, name: self.name, tiles: self.terrainController.getTiles()})
         },
@@ -283,10 +337,10 @@ tg = (function() {
             var self = this;
             var tulpaEvent = new TulpaEvent();
             window.addEventListener('resize', self.resizeCanvas.bind(self), false);
-            self.canvas.addEventListener('mousedown', tulpaEvent.mouseDown.bind(tulpaEvent), false);
-            self.canvas.addEventListener('mousemove', tulpaEvent.mouseMove.bind(tulpaEvent, self.changeTile.bind(self), self.moveView.bind(self)), false);
-            self.canvas.addEventListener('mouseup', tulpaEvent.mouseUp.bind(tulpaEvent), false);
-            self.canvas.addEventListener('click', tulpaEvent.mouseClick.bind(tulpaEvent, self.changeTile.bind(self)), false);
+            self.canvas.addEventListener('mousedown', tulpaEvent.mouseDown.bind(tulpaEvent, self.mouseDownPrimary.bind(self), self.mouseDownSecondary.bind(self)), false);
+            self.canvas.addEventListener('mousemove', tulpaEvent.mouseMove.bind(tulpaEvent, self.mouseMovePrimary.bind(self), self.mouseMoveSecondary.bind(self)), false);
+            self.canvas.addEventListener('mouseup', tulpaEvent.mouseUp.bind(tulpaEvent, self.mouseUpPrimary.bind(self), self.mouseUpSecondary.bind(self)), false);
+            self.canvas.addEventListener('click', tulpaEvent.mouseClick.bind(tulpaEvent, self.mouseClickPrimary.bind(self), self.mouseClickSecondary.bind(self)), false);
             self.canvas.addEventListener('contextmenu', function(e) {e.preventDefault();}, false);
             document.onkeydown = function(e) {
                 switch (e.keyCode) {
