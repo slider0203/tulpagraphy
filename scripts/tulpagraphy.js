@@ -329,6 +329,286 @@ tg = (function() {
             callback();
         }
     }
+    
+    function RiverController(rivers, canvas, context) {
+        var self = this;
+        self.rivers = rivers;
+        self.canvas = canvas;
+        self.context = context;
+        self.selectedPoint = null;
+        self.selectedRiver = null;
+        self.scale = 1;
+        self.style = {
+            curve:	{ width: 6, color: "#688aa3" },
+            cpline:	{ width: 1, color: "#C00" },
+            point: { radius: 10, width: 2, color: "#900", fill: "rgba(200,200,200,0.5)", arc1: 0, arc2: 2 * Math.PI }
+        }
+        self.offset = {x: 0, y: 0};
+    }
+
+    RiverController.prototype = {
+        getRivers: function() {
+            var self = this;
+            // Remove all rivers that consist of a single point
+            return self.rivers.filter(river => river.length > 1);
+        },
+
+        setScale: function(scale) {
+            var self = this;
+            self.scale = scale;
+        },
+
+        clearSelectedRiver: function() {
+            var self = this;
+            self.selectedRiver = null;
+        },
+
+        deleteSelectedRiver: function() {
+            var self = this;
+            self.rivers.splice(self.selectedRiver, 1);
+            self.selectedRiver = null;
+        },
+
+        startRiver: function(x, y) {
+            var self = this;
+            self.selectedRiver = self.rivers.length;
+            self.rivers.push([{x: (x - self.offset.x) / self.scale, y: (y - self.offset.y) / self.scale, control: false}]);
+        },
+
+        addAnchor: function(x, y) {
+            var self = this;
+            var anchor = self.rivers[self.selectedRiver][self.rivers[self.selectedRiver].length - 1];
+            self.rivers[self.selectedRiver].push({x: (anchor.x) + 50, y: (anchor.y) + 50, control: true});
+            self.rivers[self.selectedRiver].push({x: (x - self.offset.x) / self.scale - 50, y: (y - self.offset.y) / self.scale - 50, control: true});
+            self.rivers[self.selectedRiver].push({x: (x - self.offset.x) / self.scale, y: (y - self.offset.y) / self.scale, control: false});
+        },
+
+        isPointOnSelectedPath: function(x, y) {
+            var self = this;
+            self.drawRiver(self.rivers[self.selectedRiver]);
+            return self.context.isPointInStroke(x, y);
+        },
+
+        drawRiver: function(river) {
+            var self = this;
+            self.context.lineWidth = self.style.curve.width * self.scale;
+            self.context.beginPath();
+            self.context.moveTo(river[0].x * self.scale + self.offset.x, river[0].y * self.scale + self.offset.y);
+
+            var controls = [];
+            for(var i = 1; i < river.length; i++) {
+                if (river[i].control) {
+                    controls.push(river[i]);
+                }
+                else {
+                    self.context.bezierCurveTo(controls[0].x * self.scale + self.offset.x, controls[0].y * self.scale + self.offset.y,
+                        controls[1].x * self.scale + self.offset.x, controls[1].y * self.scale + self.offset.y,
+                        river[i].x * self.scale + self.offset.x, river[i].y * self.scale + self.offset.y);
+                    controls = [];
+                }
+            }
+        },
+
+        drawRiverSegment: function(origin, control1, control2, end) {
+            var self = this;
+            self.context.lineWidth = self.style.curve.width * self.scale;
+            self.context.beginPath();
+            self.context.moveTo(origin.x * self.scale + self.offset.x, origin.y * self.scale + self.offset.y);
+            self.context.bezierCurveTo(control1.x * self.scale + self.offset.x, control1.y * self.scale + self.offset.y,
+                control2.x * self.scale + self.offset.x, control2.y * self.scale + self.offset.y,
+                end.x * self.scale + self.offset.x, end.y * self.scale + self.offset.y);
+        },
+
+        insertAnchorOnSegment: function(x, y) {
+            var self = this;
+            var river = self.rivers[self.selectedRiver];
+            for(var i = 3; i < river.length; i += 3) {
+                self.drawRiverSegment(river[i - 3], river[i - 2], river[i - 1], river[i]);
+
+                if (self.context.isPointInStroke(x, y)) {
+                    self.rivers[self.selectedRiver].splice(i - 1, 0, {x: (x - self.offset.x) / self.scale + 50, y: (y - self.offset.y) / self.scale + 50, control: true});
+                    self.rivers[self.selectedRiver].splice(i, 0, {x: (x - self.offset.x) / self.scale, y: (y - self.offset.y) / self.scale, control: false});
+                    self.rivers[self.selectedRiver].splice(i + 1, 0, {x: (x - self.offset.x) / self.scale - 50, y: (y - self.offset.y) / self.scale - 50, control: true});
+                    return;
+                }
+            }
+        },
+
+        insertAnchor: function(x, y) {
+            var self = this;
+            if (self.isPointOnSelectedPath) {
+                self.insertAnchorOnSegment(x, y)
+            }
+        },
+
+        deleteAnchor: function() {
+            var self = this;
+            if (self.selectedPoint !== null) {
+                self.rivers[self.selectedRiver].splice(Math.max(self.selectedPoint - 1, 0), 3);
+                if (self.rivers[self.selectedRiver].length === 0) {
+                    self.rivers.splice(self.selectedRiver, 1);
+                    self.selectedRiver = null;
+                }
+                self.selectedPoint = null;
+            }
+        },
+        
+        updateOffset: function(x, y) {
+            var self = this;
+            self.offset.x += x;
+            self.offset.y += y;
+        },
+
+        render: function() {
+            var self = this;
+            if (self.rivers.length > 0) {
+                self.context.save();
+                self.context.lineCap = "round";
+                self.context.lineJoin = "round";
+                self.drawRivers();
+                self.drawControlLines();
+                self.drawInteractionPoints();
+                self.context.restore();                    
+            }
+        },
+
+        drawRivers: function() {
+            var self = this;
+            self.context.strokeStyle = self.style.curve.color;
+            for (var r in self.rivers) {
+                self.drawRiver(self.rivers[r]);
+                self.context.stroke();    
+            }
+            self.context.setLineDash([]);
+        },
+
+        drawControlLines: function() {
+            var self = this;
+            if (self.selectedRiver !== null) {
+                self.context.lineWidth = self.style.cpline.width;
+                self.context.strokeStyle = self.style.cpline.color;
+    
+                for(var i = 3; i < self.rivers[self.selectedRiver].length; i += 3) {
+                    self.context.beginPath();
+                    self.context.moveTo(self.rivers[self.selectedRiver][i - 3].x * self.scale + self.offset.x, self.rivers[self.selectedRiver][i - 3].y * self.scale + self.offset.y);
+                    self.context.lineTo(self.rivers[self.selectedRiver][i - 2].x * self.scale + self.offset.x, self.rivers[self.selectedRiver][i - 2].y * self.scale + self.offset.y);
+                    self.context.stroke();
+                    self.context.beginPath();
+                    self.context.moveTo(self.rivers[self.selectedRiver][i - 1].x * self.scale + self.offset.x, self.rivers[self.selectedRiver][i - 1].y * self.scale + self.offset.y);
+                    self.context.lineTo(self.rivers[self.selectedRiver][i].x * self.scale + self.offset.x, self.rivers[self.selectedRiver][i].y * self.scale + self.offset.y);
+                    self.context.stroke();
+                }    
+            }
+        },
+
+        drawInteractionPoints: function() {
+            var self = this;
+            if (self.selectedRiver !== null) {
+                self.context.lineWidth = self.style.point.width;
+                self.context.strokeStyle = self.style.point.color;
+                self.context.fillStyle = self.style.point.fill;
+                for (var p in self.rivers[self.selectedRiver]) {
+                    self.context.beginPath();
+                    self.context.arc(self.rivers[self.selectedRiver][p].x * self.scale + self.offset.x,
+                        self.rivers[self.selectedRiver][p].y * self.scale + self.offset.y, self.style.point.radius,
+                        self.style.point.arc1, self.style.point.arc2, true);
+                    self.context.fill();
+                    self.context.stroke();
+                }
+            }
+        },
+
+        getPointInSelectedRiver: function(x, y) {
+            var self = this;
+            var dx;
+            var dy;
+            for (var p in self.rivers[self.selectedRiver]) {
+                dx = self.rivers[self.selectedRiver][p].x * self.scale + self.offset.x - x;
+                dy = self.rivers[self.selectedRiver][p].y * self.scale + self.offset.y - y;
+                if ((dx * dx) + (dy * dy) < self.style.point.radius * self.style.point.radius) {
+                    self.selectedPoint = p;
+                    return;
+                }
+            }
+        },
+
+        getRiverByPointInPath: function(x, y) {
+            var self = this;
+            for (var r in self.rivers) {
+                self.context.lineWidth = self.style.curve.width;
+                self.drawRiver(self.rivers[r]);
+                if (self.context.isPointInStroke(event.x, event.y)) {
+                    return r;
+                }
+            }
+            return null;
+        },
+
+        onMouseDown: function(event, callback) {
+            var self = this;
+            if (self.selectedRiver !== null) {
+                self.getPointInSelectedRiver(event.x, event.y);
+                if (self.selectedPoint) {
+                    self.canvas.style.cursor = "move";
+                }
+            }
+            if (!self.selectedPoint) {
+                var r = self.getRiverByPointInPath(event.x, event.y);
+                if (r !== null) {
+                    if (self.selectedRiver !== r) {
+                        self.selectedRiver = r;
+                    }
+                    else {
+                        self.clearSelectedRiver()
+                    }
+                }
+                else if (self.selectedRiver !== null) {
+                    self.addAnchor(event.x, event.y);
+                }
+                else {
+                    self.startRiver(event.x, event.y);
+                }
+            }
+            callback();
+        },
+
+        onMouseMove: function(event, callback) {
+            var self = this;
+            if (self.selectedPoint) {
+                self.rivers[self.selectedRiver][self.selectedPoint].x += event.movementX / self.scale;
+                self.rivers[self.selectedRiver][self.selectedPoint].y += event.movementY / self.scale;
+                if (!self.rivers[self.selectedRiver][self.selectedPoint].control) {
+                    if (self.selectedPoint - 1 > 0) {
+                        self.rivers[self.selectedRiver][+self.selectedPoint - 1].x += event.movementX / self.scale;
+                        self.rivers[self.selectedRiver][+self.selectedPoint - 1].y += event.movementY / self.scale;    
+                    }
+                    if (+self.selectedPoint + 1 < self.rivers[self.selectedRiver].length) {
+                        self.rivers[self.selectedRiver][+self.selectedPoint + 1].x += event.movementX / self.scale;
+                        self.rivers[self.selectedRiver][+self.selectedPoint + 1].y += event.movementY / self.scale;   
+                    }        
+                }
+                callback();
+            }
+        },
+
+        onMouseUp: function(event, callback) {
+            var self = this;
+            self.selectedPoint = null;
+            self.canvas.style.cursor = "default";
+            callback();
+        },
+
+        onRightClick: function(event, callback) {
+            var self = this;
+            self.getPointInSelectedRiver(event.x, event.y);
+            if (self.selectedPoint !== null) {
+                self.deleteAnchor();
+            } else {
+                self.insertAnchor(event.x, event.y);
+            }
+            callback();
+        }
+    }
 
     function TerrainController(tiles, canvas, context) {
         var self = this;
@@ -520,18 +800,34 @@ tg = (function() {
         self.canvas;
         self.context;
         self.scale = 1;
-        self.activeLayer = 'roads';
+        self.activeLayer = 'rivers';
         self.terrainController;
         self.roadController;
+        self.riverController;
 
-        self.initialize(mapData.tiles, mapData.roads);
+        self.initialize(mapData.tiles, mapData.roads, mapData.rivers);
     }
 
     MapViewModel.prototype = {
+        changeActiveLayer: function(layer) {
+            var self = this;
+            self.activeLayer = layer;
+            if (self.activeLayer == 'terrain') {
+                document.getElementById('toolbar').style.display = 'block';
+            }
+            else  {
+                document.getElementById('toolbar').style.display = 'block';
+            }
+        },
+
         clearSelected: function() {
             var self = this;
             if (self.activeLayer == 'roads') {
                 self.roadController.clearSelectedRoad();
+                self.render();
+            }
+            if (self.activeLayer == 'rivers') {
+                self.riverController.clearSelectedRiver();
                 self.render();
             }
         },
@@ -542,12 +838,19 @@ tg = (function() {
                 self.roadController.deleteSelectedRoad();
                 self.mapUpdated();
             }
+            if (self.activeLayer == 'rivers') {
+                self.riverController.deleteSelectedRiver();
+                self.mapUpdated();
+            }
         },
 
         mouseDownPrimary: function(event) {
             var self = this;
             if (self.activeLayer == 'roads') {
                 self.roadController.onMouseDown(event, self.mapUpdated.bind(self));
+            }
+            if (self.activeLayer == 'rivers') {
+                self.riverController.onMouseDown(event, self.mapUpdated.bind(self));
             }
         },
 
@@ -562,6 +865,9 @@ tg = (function() {
             if (self.activeLayer == 'roads') {
                 self.roadController.onMouseMove(event, self.render.bind(self));
             }
+            if (self.activeLayer == 'rivers') {
+                self.riverController.onMouseMove(event, self.render.bind(self));
+            }
         },
 
         mouseMoveSecondary: function() {
@@ -574,6 +880,9 @@ tg = (function() {
             if (self.activeLayer == 'roads') {
                 self.roadController.onMouseUp(event, self.mapUpdated.bind(self));
             }
+            if (self.activeLayer == 'rivers') {
+                self.riverController.onMouseUp(event, self.mapUpdated.bind(self));
+            }
         },
 
         mouseUpSecondary: function() {
@@ -582,7 +891,7 @@ tg = (function() {
         mouseClickPrimary: function(event) {
             var self = this;
             if (self.activeLayer == 'terrain') {
-                self.changeTile(event);
+                self.terrainController.changeTerrainTile(event, self.mapUpdated.bind(self));
             }
         },
 
@@ -591,12 +900,16 @@ tg = (function() {
             if (self.activeLayer == 'roads') {
                 self.roadController.onRightClick(event, self.mapUpdated.bind(self));
             }
+            if (self.activeLayer == 'rivers') {
+                self.riverController.onRightClick(event, self.mapUpdated.bind(self));
+            }
         },
 
         moveView: function(x, y) {
             var self = this;
             self.terrainController.updateOffset(x, y);
             self.roadController.updateOffset(x, y);
+            self.riverController.updateOffset(x, y);
             self.render();
         },
 
@@ -610,13 +923,15 @@ tg = (function() {
         mapUpdated: function() {
             var self = this;
             self.render();
-            tg.saveMap({id: self.id, name: self.name, tiles: self.terrainController.getTiles(), roads: self.roadController.getRoads()});
+            tg.saveMap({id: self.id, name: self.name, tiles: self.terrainController.getTiles(),
+                roads: self.roadController.getRoads(), rivers: self.riverController.getRivers()});
         },
 
         render: function() {
             var self = this;
             self.context.clearRect(0, 0, self.canvas.width, self.canvas.height);
             self.terrainController.render();
+            self.riverController.render();
             self.roadController.render();
         },
 
@@ -625,6 +940,7 @@ tg = (function() {
             self.scale = Math.min(self.scale + .05, 1);
             self.terrainController.setScale(self.scale);
             self.roadController.setScale(self.scale);
+            self.riverController.setScale(self.scale);
             self.render();
         },
 
@@ -633,6 +949,7 @@ tg = (function() {
             self.scale = Math.max(self.scale - .05, .3);
             self.terrainController.setScale(self.scale);
             self.roadController.setScale(self.scale);
+            self.riverController.setScale(self.scale);
             self.render();
         },
 
@@ -675,12 +992,19 @@ tg = (function() {
             };
         },
 
-        initialize: function(tiles, roads) {
+        initialize: function(tiles, roads, rivers) {
             var self = this;
             var tulpagraphyContainer = document.getElementById('tulpagraphy');
             self.canvas = document.createElement('canvas');
             tulpagraphyContainer.appendChild(self.canvas);
             self.context = self.canvas.getContext('2d');
+            var controls = document.createElement('div');
+            controls.setAttribute('id', 'controls');
+            var layer = document.createElement('button')
+            layer.addEventListener('click', self.changeActiveLayer.bind(self, 'terrain'), false);
+            layer.innerText = 'Layer';
+            controls.appendChild(layer);
+            tulpagraphyContainer.appendChild(controls);
             var toolbar = document.createElement('div');
             toolbar.setAttribute('id', 'toolbar');
             self.terrainController = new TerrainController(tiles, self.canvas, self.context);
@@ -691,6 +1015,7 @@ tg = (function() {
                 toolbar.appendChild(tool);
             });
             self.roadController = new RoadController(roads, self.canvas, self.context);
+            self.riverController = new RiverController(rivers, self.canvas, self.context);
             tulpagraphyContainer.appendChild(toolbar);
 
             self.bindActions();
@@ -774,7 +1099,7 @@ tg = (function() {
 
         createNewMap: function() {
             var id = this.getNextId();
-            localStorage.setItem(id, JSON.stringify({id: id, name: 'untitled', tiles: [], roads: []}));
+            localStorage.setItem(id, JSON.stringify({id: id, name: 'untitled', tiles: [], roads: [], rivers:[]}));
             return id;
         },
 
