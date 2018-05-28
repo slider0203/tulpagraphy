@@ -100,14 +100,14 @@ tg = (function() {
         startRoad: function(x, y) {
             var self = this;
             self.selectedRoad = self.roads.length;
-            self.roads.push([{x: (x - self.offset.x) / self.scale, y: (y - self.offset.y) / self.scale, control: false}]);
+            self.roads.push([{x: (x - self.offset.x) / self.scale, y: (y - self.offset.y) / self.scale, c: false}]);
         },
 
         addAnchor: function(x, y) {
             var self = this;
             var controlPoint = self.calculateNewControlPointLocation(x, y, self.roads[self.selectedRoad].length - 1);
-            self.roads[self.selectedRoad].push({x: controlPoint.x, y: controlPoint.y, control: true});
-            self.roads[self.selectedRoad].push({x: (x - self.offset.x) / self.scale, y: (y - self.offset.y) / self.scale, control: false});
+            self.roads[self.selectedRoad].push({x: controlPoint.x, y: controlPoint.y, c: true});
+            self.roads[self.selectedRoad].push({x: (x - self.offset.x) / self.scale, y: (y - self.offset.y) / self.scale, c: false});
         },
 
         calculateNewControlPointLocation: function(x, y, index) {
@@ -132,7 +132,7 @@ tg = (function() {
 
             var control;
             for(var i = 1; i < road.length; i++) {
-                if (road[i].control) {
+                if (road[i].c) {
                     control = road[i]
                 }
                 else {
@@ -159,8 +159,8 @@ tg = (function() {
 
                 if (self.context.isPointInStroke(x, y)) {
                     var controlPoint = self.calculateNewControlPointLocation(x, y, i - 2);
-                    self.roads[self.selectedRoad].splice(i - 1, 0, {x: controlPoint.x, y: controlPoint.y, control: true});
-                    self.roads[self.selectedRoad].splice(i, 0, {x: (x - self.offset.x) / self.scale, y: (y - self.offset.y) / self.scale, control: false});
+                    self.roads[self.selectedRoad].splice(i - 1, 0, {x: controlPoint.x, y: controlPoint.y, c: true});
+                    self.roads[self.selectedRoad].splice(i, 0, {x: (x - self.offset.x) / self.scale, y: (y - self.offset.y) / self.scale, c: false});
                     return;
                 }
             }
@@ -372,15 +372,15 @@ tg = (function() {
         startRiver: function(x, y) {
             var self = this;
             self.selectedRiver = self.rivers.length;
-            self.rivers.push([{x: (x - self.offset.x) / self.scale, y: (y - self.offset.y) / self.scale, control: false}]);
+            self.rivers.push([{x: (x - self.offset.x) / self.scale, y: (y - self.offset.y) / self.scale, c: false}]);
         },
 
         addAnchor: function(x, y) {
             var self = this;
             var anchor = self.rivers[self.selectedRiver][self.rivers[self.selectedRiver].length - 1];
-            self.rivers[self.selectedRiver].push({x: (anchor.x) + 50, y: (anchor.y) + 50, control: true});
-            self.rivers[self.selectedRiver].push({x: (x - self.offset.x) / self.scale - 50, y: (y - self.offset.y) / self.scale - 50, control: true});
-            self.rivers[self.selectedRiver].push({x: (x - self.offset.x) / self.scale, y: (y - self.offset.y) / self.scale, control: false});
+            self.rivers[self.selectedRiver].push({x: (anchor.x) + 50, y: (anchor.y) + 50, c: true});
+            self.rivers[self.selectedRiver].push({x: (x - self.offset.x) / self.scale - 50, y: (y - self.offset.y) / self.scale - 50, c: true});
+            self.rivers[self.selectedRiver].push({x: (x - self.offset.x) / self.scale, y: (y - self.offset.y) / self.scale, c: false});
         },
 
         isPointOnSelectedPath: function(x, y) {
@@ -397,7 +397,7 @@ tg = (function() {
 
             var controls = [];
             for(var i = 1; i < river.length; i++) {
-                if (river[i].control) {
+                if (river[i].c) {
                     controls.push(river[i]);
                 }
                 else {
@@ -426,9 +426,9 @@ tg = (function() {
                 self.drawRiverSegment(river[i - 3], river[i - 2], river[i - 1], river[i]);
 
                 if (self.context.isPointInStroke(x, y)) {
-                    self.rivers[self.selectedRiver].splice(i - 1, 0, {x: (x - self.offset.x) / self.scale + 50, y: (y - self.offset.y) / self.scale + 50, control: true});
-                    self.rivers[self.selectedRiver].splice(i, 0, {x: (x - self.offset.x) / self.scale, y: (y - self.offset.y) / self.scale, control: false});
-                    self.rivers[self.selectedRiver].splice(i + 1, 0, {x: (x - self.offset.x) / self.scale - 50, y: (y - self.offset.y) / self.scale - 50, control: true});
+                    self.rivers[self.selectedRiver].splice(i - 1, 0, {x: (x - self.offset.x) / self.scale + 50, y: (y - self.offset.y) / self.scale + 50, c: true});
+                    self.rivers[self.selectedRiver].splice(i, 0, {x: (x - self.offset.x) / self.scale, y: (y - self.offset.y) / self.scale, c: false});
+                    self.rivers[self.selectedRiver].splice(i + 1, 0, {x: (x - self.offset.x) / self.scale - 50, y: (y - self.offset.y) / self.scale - 50, c: true});
                     return;
                 }
             }
@@ -577,7 +577,7 @@ tg = (function() {
             if (self.selectedPoint) {
                 self.rivers[self.selectedRiver][self.selectedPoint].x += event.movementX / self.scale;
                 self.rivers[self.selectedRiver][self.selectedPoint].y += event.movementY / self.scale;
-                if (!self.rivers[self.selectedRiver][self.selectedPoint].control) {
+                if (!self.rivers[self.selectedRiver][self.selectedPoint].c) {
                     if (self.selectedPoint - 1 > 0) {
                         self.rivers[self.selectedRiver][+self.selectedPoint - 1].x += event.movementX / self.scale;
                         self.rivers[self.selectedRiver][+self.selectedPoint - 1].y += event.movementY / self.scale;    
