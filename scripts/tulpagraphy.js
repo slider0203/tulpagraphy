@@ -662,7 +662,7 @@ tg = (function() {
 
         getTiles: function() {
             var self = this;
-            return self.tiles;
+            return self.tiles.filter(tile => tile.t != 0);
         },
 
         setScale: function(scale) {
