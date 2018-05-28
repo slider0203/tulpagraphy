@@ -1,10 +1,13 @@
-html, body {
+html,
+body {
 	width: 100%;
 	height: 100%;
 	margin: 0px;
 	border: 0;
-	overflow: hidden; /*  Disable scrollbars */
-	display: block;  /* No floating content on sides */
+	overflow: hidden;
+	/*  Disable scrollbars */
+	display: block;
+	/* No floating content on sides */
 }
 
 #toolbar {
@@ -14,5 +17,103 @@ html, body {
 	bottom: 0;
 	z-index: 1;
 	background-color: white;
-	box-shadow: 0 -3px 5px -1px rgba(0,0,0,.2), 0 -6px 10px 0 rgba(0,0,0,.14), 0 -1px 18px 0 rgba(0,0,0,.12);
+	box-shadow: 0 -3px 5px -1px rgba(0, 0, 0, .2), 0 -6px 10px 0 rgba(0, 0, 0, .14), 0 -1px 18px 0 rgba(0, 0, 0, .12);
+}
+
+#layers {
+	position: absolute;
+	width: 30px;
+	right: 50;
+	top: 10;
+	z-index: 1;
+	background-color: white;
+	box-shadow: 0 -3px 5px -1px rgba(0, 0, 0, .2), 0 -6px 10px 0 rgba(0, 0, 0, .14), 0 -1px 18px 0 rgba(0, 0, 0, .12);
+}
+
+.btn-group button {
+	background-color: white;
+	border: none;
+	cursor: pointer;
+	/* Pointer/hand icon */
+	width: 100%;
+	/* Set a width if needed */
+	display: block;
+	/* Make the buttons appear below each other */
+}
+
+.btn-group button:not(:last-child) {
+	border-bottom: none;
+	/* Prevent double borders */
+}
+
+/* Add a background color on hover */
+
+.btn-group button:hover {
+	background-color: #63a4ff;
+}
+
+.controls .active {
+	background-color: #63a4ff;
+}
+
+.controls {
+	position: absolute;
+	right: 10;
+	top: 0;
+	z-index: 100;
+	width: 38px;
+	box-shadow: 0 3px 5px -1px rgba(0, 0, 0, .2), 0 6px 10px 0 rgba(0, 0, 0, .14), 0 1px 18px 0 rgba(0, 0, 0, .12);
+	padding: 0;
+}
+
+.controls li {
+	pointer-events: none;
+	display: inline-block;
+	list-style: none;
+	transform: translateZ(0);
+}
+
+.controls span img {
+	display: inline-block;
+	background-color: white;
+	pointer-events: auto;
+}
+
+.controls span img:hover {
+	background-color: #63a4ff;
+	cursor: hand;
+}
+
+.controls li ul {
+	position: absolute;
+	right: 50;
+	top: 0;
+	display: inline-block;
+	padding: 0;
+	z-index: 100;
+	opacity: 0;
+	transition: opacity 0.5s linear;
+	box-shadow: 0 3px 5px -1px rgba(0, 0, 0, .2), 0 6px 10px 0 rgba(0, 0, 0, .14), 0 1px 18px 0 rgba(0, 0, 0, .12);
+}
+
+.controls li ul:after, .controls li ul:before {
+	left: 100%;
+	top: 10;
+	border: solid transparent;
+	content: " ";
+	height: 0;
+	width: 0;
+	position: absolute;
+	pointer-events: none;
+}
+
+.controls li ul:before {
+	border-color: rgba(255, 255, 255, 0);
+	border-left-color: #ffffff;
+	border-width: 7px;
+}
+
+.controls li:hover ul {
+	opacity: 100;
+	transition: opacity 0.3s linear;
 }

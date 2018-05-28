@@ -800,7 +800,7 @@ tg = (function() {
         self.canvas;
         self.context;
         self.scale = 1;
-        self.activeLayer = 'rivers';
+        self.activeLayer = 'terrain';
         self.terrainController;
         self.roadController;
         self.riverController;
@@ -811,22 +811,27 @@ tg = (function() {
     MapViewModel.prototype = {
         changeActiveLayer: function(layer) {
             var self = this;
+            document.getElementById(self.activeLayer + "Layer").classList.remove('active');
             self.activeLayer = layer;
             if (self.activeLayer == 'terrain') {
                 document.getElementById('toolbar').style.display = 'block';
             }
             else  {
-                document.getElementById('toolbar').style.display = 'block';
+                document.getElementById('toolbar').style.display = 'none';
             }
+            self.roadController.clearSelectedRoad();
+            self.riverController.clearSelectedRiver();
+            self.render();
+            document.getElementById(self.activeLayer + "Layer").classList.add('active');
         },
 
         clearSelected: function() {
             var self = this;
-            if (self.activeLayer == 'roads') {
+            if (self.activeLayer == 'road') {
                 self.roadController.clearSelectedRoad();
                 self.render();
             }
-            if (self.activeLayer == 'rivers') {
+            if (self.activeLayer == 'river') {
                 self.riverController.clearSelectedRiver();
                 self.render();
             }
@@ -834,11 +839,11 @@ tg = (function() {
 
         deleteSelected: function() {
             var self = this;
-            if (self.activeLayer == 'roads') {
+            if (self.activeLayer == 'road') {
                 self.roadController.deleteSelectedRoad();
                 self.mapUpdated();
             }
-            if (self.activeLayer == 'rivers') {
+            if (self.activeLayer == 'river') {
                 self.riverController.deleteSelectedRiver();
                 self.mapUpdated();
             }
@@ -846,10 +851,10 @@ tg = (function() {
 
         mouseDownPrimary: function(event) {
             var self = this;
-            if (self.activeLayer == 'roads') {
+            if (self.activeLayer == 'road') {
                 self.roadController.onMouseDown(event, self.mapUpdated.bind(self));
             }
-            if (self.activeLayer == 'rivers') {
+            if (self.activeLayer == 'river') {
                 self.riverController.onMouseDown(event, self.mapUpdated.bind(self));
             }
         },
@@ -862,10 +867,10 @@ tg = (function() {
             if (self.activeLayer == 'terrain') {
                 self.terrainController.changeTerrainTile(event, self.mapUpdated.bind(self));
             }
-            if (self.activeLayer == 'roads') {
+            if (self.activeLayer == 'road') {
                 self.roadController.onMouseMove(event, self.render.bind(self));
             }
-            if (self.activeLayer == 'rivers') {
+            if (self.activeLayer == 'river') {
                 self.riverController.onMouseMove(event, self.render.bind(self));
             }
         },
@@ -877,10 +882,10 @@ tg = (function() {
 
         mouseUpPrimary: function(event) {
             var self = this;
-            if (self.activeLayer == 'roads') {
+            if (self.activeLayer == 'road') {
                 self.roadController.onMouseUp(event, self.mapUpdated.bind(self));
             }
-            if (self.activeLayer == 'rivers') {
+            if (self.activeLayer == 'river') {
                 self.riverController.onMouseUp(event, self.mapUpdated.bind(self));
             }
         },
@@ -897,10 +902,10 @@ tg = (function() {
 
         mouseClickSecondary: function() {
             var self = this;
-            if (self.activeLayer == 'roads') {
+            if (self.activeLayer == 'road') {
                 self.roadController.onRightClick(event, self.mapUpdated.bind(self));
             }
-            if (self.activeLayer == 'rivers') {
+            if (self.activeLayer == 'river') {
                 self.riverController.onRightClick(event, self.mapUpdated.bind(self));
             }
         },
@@ -998,13 +1003,6 @@ tg = (function() {
             self.canvas = document.createElement('canvas');
             tulpagraphyContainer.appendChild(self.canvas);
             self.context = self.canvas.getContext('2d');
-            var controls = document.createElement('div');
-            controls.setAttribute('id', 'controls');
-            var layer = document.createElement('button')
-            layer.addEventListener('click', self.changeActiveLayer.bind(self, 'terrain'), false);
-            layer.innerText = 'Layer';
-            controls.appendChild(layer);
-            tulpagraphyContainer.appendChild(controls);
             var toolbar = document.createElement('div');
             toolbar.setAttribute('id', 'toolbar');
             self.terrainController = new TerrainController(tiles, self.canvas, self.context);
@@ -1019,6 +1017,8 @@ tg = (function() {
             tulpagraphyContainer.appendChild(toolbar);
 
             self.bindActions();
+
+            document.getElementById('terrainLayer').classList.add('active');
 
             var loader = setInterval(function() {
                 if (self.terrainController.terrainLoaded()) {

@@ -5,6 +5,25 @@
     </head>
     <body>
         <div id="tulpagraphy">
+            <ul class="controls">
+                <li>
+                    <span><img alt="Map Layer" title="Map Layer" src="/images/ui/stack.png"/></span>
+                    <ul>
+                        <li>
+                            <span><img id="terrainLayer" alt="Terrain Layer" title="Terrain Layer" src="/images/ui/grass.png" onclick="tg.mapViewModel.changeActiveLayer('terrain')"></span>
+                            <span><img id="roadLayer" alt="Road Layer" title="Road Layer" src="/images/ui/path.png" onclick="tg.mapViewModel.changeActiveLayer('road')"></span>
+                            <span><img id="riverLayer" alt="River Layer" title="River Layer" src="/images/ui/river.png" onclick="tg.mapViewModel.changeActiveLayer('river')"></span>
+                        </li>
+                    </ul>
+                </li>
+                <li>
+                    <span><img alt="Zoom In" title="Zoom In" src="/images/ui/plus.png" onclick="tg.mapViewModel.zoomIn()"/></span>
+                </li>
+                <li>
+                    <span><img alt="Zoom Out" title="Zoom Out" src="/images/ui/minus.png" onclick="tg.mapViewModel.zoomOut()"/></span>
+                </li>
+            </div>
+            <div id="toolbar"></div>
         </div>
     </body>
 </html>
