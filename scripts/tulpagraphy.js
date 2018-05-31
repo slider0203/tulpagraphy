@@ -615,6 +615,14 @@ tg = (function() {
         self.tiles = tiles;
         self.canvas = canvas;
         self.context = context;
+        self.m_canvas = document.createElement('canvas');
+        self.m_canvas.width = 300;
+        self.m_canvas.height = 150;
+        self.m_context = self.m_canvas.getContext('2d');
+        self.m2_canvas = document.createElement('canvas');
+        self.m2_canvas.width = 300;
+        self.m2_canvas.height = 150;
+        self.m2_context = self.m2_canvas.getContext('2d');
         self.scale = 1;
         self.tileWidth = 300;
         self.tileHeight = 150;
@@ -791,8 +799,7 @@ tg = (function() {
                 var terrain = self.getTerrainById(tile[0].t);
                 if (terrain.baseZIndex > zIndex) {
                     var isEvenRow = Math.abs(xIndex) % 2 == 1; // yes, if it's equal to 1, the first row is index 0, not index 1
-                    self.context.drawImage(terrain.overlay[i].element, self.getCartesianX(xIndex), self.getCartesianY(yIndex, isEvenRow),
-                        self.getTileWidth(), self.getTileHeight());
+                    self.m2_context.drawImage(terrain.overlay[i].element, 0, 0, self.getTileWidth(), self.getTileHeight());
                 }
             }
         },
@@ -808,6 +815,54 @@ tg = (function() {
             self.drawOverlay(xIndex, yIndex, zIndex, xIndex, yIndex + 1, 5);
         },
 
+        drawShore: function(xIndex, yIndex, zIndex, x, y, i) {
+            var self = this;
+            var tile = self.tiles.filter(tile => tile.x == x && tile.y == y);
+            if (tile.length > 0) {
+                var terrain = self.getTerrainById(tile[0].t);
+                var ocean = self.getTerrainById(1);
+                if (terrain.baseZIndex > zIndex) {
+                    self.m_context.globalCompositeOperation = "lighten";
+                    self.m_context.drawImage(ocean.overlay[i].element, 0, 0, self.getTileWidth(), self.getTileHeight());
+                }
+            }
+        },
+
+        prepareShores: function(xIndex, yIndex, zIndex) {
+            var self = this;
+            self.m_context.clearRect(0, 0, self.m_canvas.width, self.m_canvas.height);
+            self.m_context.save();
+            var isEvenRow = Math.abs(xIndex) %2 == 1;
+            self.drawShore(xIndex, yIndex, zIndex, xIndex, yIndex - 1, 0);
+            self.drawShore(xIndex, yIndex, zIndex, xIndex - 1, isEvenRow ? yIndex : yIndex - 1 , 1);
+            self.drawShore(xIndex, yIndex, zIndex, xIndex + 1, isEvenRow ? yIndex : yIndex - 1, 2);
+            self.drawShore(xIndex, yIndex, zIndex, xIndex - 1, isEvenRow ? yIndex + 1 : yIndex, 3);
+            self.drawShore(xIndex, yIndex, zIndex, xIndex + 1, isEvenRow ? yIndex + 1 : yIndex, 4);
+            self.drawShore(xIndex, yIndex, zIndex, xIndex, yIndex + 1, 5);
+            self.m_context.restore();
+        },
+        
+        prepareOverlays: function(xIndex, yIndex, zIndex) {
+            var self = this;
+            self.m2_context.clearRect(0, 0, self.m2_canvas.width, self.m2_canvas.height);
+            self.m2_context.save();
+            self.drawOverlays(xIndex, yIndex, zIndex);
+            self.m2_context.globalCompositeOperation = "destination-in";
+            self.m2_context.drawImage(self.m_canvas, 0, 0);
+            self.m2_context.globalCompositeOperation = "multiply";
+            self.m2_context.drawImage(self.m_canvas, 0, 0);
+            self.m2_context.restore();
+        },
+
+        drawShores: function(xIndex, yIndex, zIndex) {
+            var self = this;
+            self.prepareShores(xIndex, yIndex, zIndex);
+            self.prepareOverlays(xIndex, yIndex, zIndex);
+            var isEvenRow = Math.abs(xIndex) % 2 == 1; // yes, if it's equal to 1, the first row is index 0, not index 1
+            self.context.drawImage(self.m2_canvas, self.getCartesianX(xIndex), self.getCartesianY(yIndex, isEvenRow),
+                self.getTileWidth(), self.getTileHeight());
+        },
+
         drawTile: function(xIndex, yIndex) {
             var self = this;
             var isEvenRow = Math.abs(xIndex) % 2 == 1; // yes, if it's equal to 1, the first row is index 0, not index 1
@@ -816,7 +871,7 @@ tg = (function() {
                 var terrain = self.getTerrainById(tile.t);
                 self.context.drawImage(terrain.images[0].element, self.getCartesianX(xIndex), self.getCartesianY(yIndex, isEvenRow),
                     self.getTileWidth(), self.getTileHeight());
-                    self.drawOverlays(xIndex, yIndex, terrain.baseZIndex);
+                    self.drawShores(xIndex, yIndex, terrain.baseZIndex);
                     if (tile.f !== null) {
                         var terrainFeature = terrain.images[tile.f].element;
                         var startX = self.getCartesianX(xIndex) - (terrainFeature.width - 300) / 2;
