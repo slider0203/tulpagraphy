@@ -631,9 +631,10 @@ tg = (function() {
             var self = this;
             if (!self.terrain || !self.terrain.length) {
                 self.terrain = [
-                    new Terrain(0, 'Blank', '/images/terrain/blank/', 500, 1),
-                    new Terrain(1, 'Grass', '/images/terrain/grass/', 500, 1),
-                    new Terrain(2, 'Black', '/images/terrain/black/', 500, 1)
+                    new Terrain(0, 'Blank', '/images/terrain/blank/', 500, 0),
+                    new Terrain(1, 'Ocean', '/images/terrain/ocean/', 0, 0),
+                    new Terrain(10, 'Grass', '/images/terrain/grass/', 500, 0),
+                    new Terrain(11, 'Forest', '/images/terrain/forest/', 500, 2)
                 ]
             }
         },
@@ -681,6 +682,11 @@ tg = (function() {
             return self.terrain.find(item => item.id == id);
         },
 
+        getRandomTerrainFeatureById: function(id) {
+            var self = this;
+            return self.terrain.find(item => item.id == id).images.length - 1;
+        },
+
         setSelectedTerrainId: function(id) {
             var self = this;
             self.selectedTerrain = id;
@@ -701,14 +707,30 @@ tg = (function() {
                      yMax: totalTiles.y - tileOffset.y };
         },
 
+        getRandomTerrainFeature: function() {
+            var self = this;
+            if (self.getTerrainById(self.getSelectedTerrainId()).images.length == 1) {
+                return null;
+            }
+            var features = self.getTerrainById(self.getSelectedTerrainId()).images.length - 2;
+            var number = Math.round(features * Math.random()) + 1;
+            console.log(number);
+            return number;
+        },
+
         changeTerrainTile: function(event, callback) {
             var self = this;
             var tileIndex = self.getTileIndex(event.offsetX, event.offsetY);
-            var index = self.tiles.findIndex(tile => tile.x == tileIndex.x && tile.y == tileIndex.y);
-            if (index > -1) {
-                self.tiles[index].t = self.getSelectedTerrainId();
-            } else {
-                self.tiles.push({x: tileIndex.x, y: tileIndex.y, t: self.getSelectedTerrainId()})
+            if (tileIndex !== undefined) {
+                var index = self.tiles.findIndex(tile => tile.x == tileIndex.x && tile.y == tileIndex.y);
+                if (index > -1) {
+                    if (event.type != "mousemove" || self.tiles[index].t !== self.getSelectedTerrainId()) {
+                        self.tiles[index].t = self.getSelectedTerrainId();
+                        self.tiles[index].f = self.getRandomTerrainFeature();    
+                    }
+                } else {
+                    self.tiles.push({x: tileIndex.x, y: tileIndex.y, t: self.getSelectedTerrainId(), f: self.getRandomTerrainFeature()})
+                }    
             }
             callback();
         },
@@ -761,21 +783,62 @@ tg = (function() {
             var self = this;
             return { x: Math.ceil(self.offset.x / (.75 * self.getTileWidth())), y: Math.ceil(self.offset.y / self.getTileHeight()) };
         },
+        
+        drawOverlay: function(xIndex, yIndex, zIndex, x, y, i) {
+            var self = this;
+            var tile = self.tiles.filter(tile => tile.x == x && tile.y == y);
+            if (tile.length > 0) {
+                var terrain = self.getTerrainById(tile[0].t);
+                if (terrain.baseZIndex > zIndex) {
+                    var isEvenRow = Math.abs(xIndex) % 2 == 1; // yes, if it's equal to 1, the first row is index 0, not index 1
+                    self.context.drawImage(terrain.overlay[i].element, self.getCartesianX(xIndex), self.getCartesianY(yIndex, isEvenRow),
+                        self.getTileWidth(), self.getTileHeight());
+                }
+            }
+        },
+
+        drawOverlays: function(xIndex, yIndex, zIndex) {
+            var self = this;
+            var isEvenRow = Math.abs(xIndex) % 2 == 1; // yes, if it's equal to 1, the first row is index 0, not index 1
+            self.drawOverlay(xIndex, yIndex, zIndex, xIndex, yIndex - 1, 0);
+            self.drawOverlay(xIndex, yIndex, zIndex, xIndex - 1, isEvenRow ? yIndex : yIndex - 1 , 1);
+            self.drawOverlay(xIndex, yIndex, zIndex, xIndex + 1, isEvenRow ? yIndex : yIndex - 1, 2);
+            self.drawOverlay(xIndex, yIndex, zIndex, xIndex - 1, isEvenRow ? yIndex + 1 : yIndex, 3);
+            self.drawOverlay(xIndex, yIndex, zIndex, xIndex + 1, isEvenRow ? yIndex + 1 : yIndex, 4);
+            self.drawOverlay(xIndex, yIndex, zIndex, xIndex, yIndex + 1, 5);
+        },
+
+        drawTile: function(xIndex, yIndex) {
+            var self = this;
+            var isEvenRow = Math.abs(xIndex) % 2 == 1; // yes, if it's equal to 1, the first row is index 0, not index 1
+            var tile = self.tiles.find(tile => tile.x == xIndex && tile.y == yIndex);
+            if (tile) {
+                var terrain = self.getTerrainById(tile.t);
+                self.context.drawImage(terrain.images[0].element, self.getCartesianX(xIndex), self.getCartesianY(yIndex, isEvenRow),
+                    self.getTileWidth(), self.getTileHeight());
+                    self.drawOverlays(xIndex, yIndex, terrain.baseZIndex);
+                    if (tile.f !== null) {
+                        var terrainFeature = terrain.images[tile.f].element;
+                        var startX = self.getCartesianX(xIndex) - (terrainFeature.width - 300) / 2;
+                        var startY = self.getCartesianY(yIndex, isEvenRow) - (terrainFeature.height - 150) / 2;
+                        self.context.drawImage(terrainFeature, startX, startY,
+                            terrainFeature.width, terrainFeature.height);
+                    }
+            } else {
+                self.context.drawImage(self.getTerrainById(0).images[0].element, self.getCartesianX(xIndex), self.getCartesianY(yIndex, isEvenRow),
+                    self.getTileWidth(), self.getTileHeight());
+            }
+        },
 
         render: function() {
             var self = this;
             var bounds = self.getBounds();
-            for (var xIndex = bounds.xMin; xIndex < bounds.xMax; xIndex++) {
-                for (var yIndex = bounds.yMin; yIndex < bounds.yMax; yIndex++) {
-                    var isEvenRow = Math.abs(xIndex) % 2 == 1; // yes, if it's equal to 1, the first row is index 0, not index 1
-                    var tile = self.tiles.find(tile => tile.x == xIndex && tile.y == yIndex);
-                    if (tile) {
-                        self.context.drawImage(self.getTerrainById(tile.t).images[0].element, self.getCartesianX(xIndex), self.getCartesianY(yIndex, isEvenRow),
-                            self.getTileWidth(), self.getTileHeight());
-                    } else {
-                        self.context.drawImage(self.getTerrainById(0).images[0].element, self.getCartesianX(xIndex), self.getCartesianY(yIndex, isEvenRow),
-                            self.getTileWidth(), self.getTileHeight());
-                    }
+            for (var yIndex = bounds.yMin; yIndex < bounds.yMax; yIndex++) {
+                for (var xIndex = Math.abs(bounds.xMin) % 2 == 0 ? bounds.xMin : bounds.xMin + 1; xIndex < bounds.xMax; xIndex += 2) {
+                    self.drawTile(xIndex, yIndex);
+                }
+                for (var xIndex = Math.abs(bounds.xMin) % 2 == 1 ? bounds.xMin : bounds.xMin + 1; xIndex < bounds.xMax; xIndex += 2) {
+                    self.drawTile(xIndex, yIndex);
                 }
             }
         },
@@ -1009,6 +1072,8 @@ tg = (function() {
             self.terrainController.terrain.forEach(function(item) {
                 var tool = document.createElement('img');
                 tool.setAttribute('src', item.imageDirectory + 'tool.png');
+                tool.setAttribute('title', item.name);
+                tool.setAttribute('alt', item.name);
                 tool.addEventListener('click', self.terrainController.setSelectedTerrainId.bind(self.terrainController, item.id));
                 toolbar.appendChild(tool);
             });
@@ -1036,9 +1101,11 @@ tg = (function() {
         self.name = name;
         self.imageDirectory = imageDirectory;
         self.baseZIndex = zIndex;
+        self.overlay = [new MapImage(imageDirectory + 'n.png'), new MapImage(imageDirectory + 'nw.png'), new MapImage(imageDirectory + 'ne.png'),
+                        new MapImage(imageDirectory + 'sw.png'), new MapImage(imageDirectory + 'se.png'), new MapImage(imageDirectory + 's.png')];
         self.images = [];
 
-        for (var i = 1; i <= number; i++) {
+        for (var i = 0; i <= number; i++) {
             self.images.push(new MapImage(imageDirectory + i + '.png'));
         }
     };
@@ -1048,6 +1115,12 @@ tg = (function() {
             var self = this;
             let loaded = true;
             self.images.forEach(function(image) {
+                if (!image.loaded) {
+                    loaded = false;
+                    return;
+                }
+            });
+            self.overlay.forEach(function(image) {
                 if (!image.loaded) {
                     loaded = false;
                     return;
