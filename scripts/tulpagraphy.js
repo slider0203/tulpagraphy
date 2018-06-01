@@ -615,14 +615,6 @@ tg = (function() {
         self.tiles = tiles;
         self.canvas = canvas;
         self.context = context;
-        self.m_canvas = document.createElement('canvas');
-        self.m_canvas.width = 300;
-        self.m_canvas.height = 150;
-        self.m_context = self.m_canvas.getContext('2d');
-        self.m2_canvas = document.createElement('canvas');
-        self.m2_canvas.width = 300;
-        self.m2_canvas.height = 150;
-        self.m2_context = self.m2_canvas.getContext('2d');
         self.scale = 1;
         self.tileWidth = 300;
         self.tileHeight = 150;
@@ -630,6 +622,14 @@ tg = (function() {
         self.terrain;
         self.selectedTerrain = 1;
         self.offset = {x: 0, y: 0};
+        self.m_canvas = document.createElement('canvas');
+        self.m_canvas.width = self.tileWidth;
+        self.m_canvas.height = self.tileHeight;
+        self.m_context = self.m_canvas.getContext('2d');
+        self.m2_canvas = document.createElement('canvas');
+        self.m2_canvas.width = self.tileWidth;
+        self.m2_canvas.height = self.tileHeight;
+        self.m2_context = self.m2_canvas.getContext('2d');
 
         self.initialize();
     }
