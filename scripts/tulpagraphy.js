@@ -976,7 +976,6 @@ tg = (function() {
             if (tile.length > 0) {
                 var terrain = self.getTerrainById(tile[0].t);
                 if (terrain.baseZIndex > zIndex) {
-                    var isEvenRow = Math.abs(xIndex) % 2 == 1; // yes, if it's equal to 1, the first row is index 0, not index 1
                     self.m2_context.drawImage(terrain.overlay[i].element, 0, 0, self.getTileWidth(), self.getTileHeight());
                 }
             }
@@ -999,7 +998,7 @@ tg = (function() {
             if (tile.length > 0) {
                 var terrain = self.getTerrainById(tile[0].t);
                 var ocean = self.getTerrainById(1);
-                if (terrain.baseZIndex > zIndex) {
+                if (terrain.id !== 0 && terrain.baseZIndex > zIndex) {
                     self.m_context.globalCompositeOperation = "lighten";
                     self.m_context.drawImage(ocean.overlay[i].element, 0, 0, self.getTileWidth(), self.getTileHeight());
                 }
