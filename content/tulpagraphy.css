@@ -10,7 +10,7 @@ body {
 	/* No floating content on sides */
 }
 
-#toolbar {
+.toolbar {
 	position: absolute;
 	width: 100%;
 	left: 0;
@@ -18,6 +18,20 @@ body {
 	z-index: 1;
 	background-color: white;
 	box-shadow: 0 -3px 5px -1px rgba(0, 0, 0, .2), 0 -6px 10px 0 rgba(0, 0, 0, .14), 0 -1px 18px 0 rgba(0, 0, 0, .12);
+}
+.toolbar input[type="color"] {
+	height: 40px;
+    padding: 8px 8px;
+	margin: 8px 8px;
+	background-color: white;
+}
+
+.toolbar input[type="text"],
+.toolbar select {
+    padding: 8px 8px;
+	margin: 8px 8px;
+    font-size: 15px;
+    box-sizing: border-box;
 }
 
 #layers {

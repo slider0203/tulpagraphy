@@ -58,6 +58,184 @@ tg = (function() {
         }
     }
 
+    function LabelController(labels, canvas, context) {
+        var self = this;
+        self.labels = labels;
+        self.canvas = canvas;
+        self.context = context;
+        self.selectedLabel = null;
+        self.scale = 1;
+        self.offset = {x: 0, y: 0};
+    }
+
+    LabelController.prototype = {
+        getLabels: function() {
+            var self = this;
+            // Remove all labels that consist of a single point
+            return self.labels.filter(label => label.v.length > 1);
+        },
+
+        setSelectedLabel: function(selectedLabel) {
+            var self = this;
+            self.selectedLabel = selectedLabel;
+            document.getElementById('labelToolbar').style.display = 'block';
+            document.getElementById('labelText').value = self.labels[self.selectedLabel].v;
+            var fontSize = document.getElementById('fontSize');
+            for (var i = 0; i < fontSize.options.length; i++) {
+                if (fontSize.options[i].text == self.labels[self.selectedLabel].p) {
+                    fontSize.selectedIndex = i;
+                    break;
+                }
+            }
+            var fonts = document.getElementById('fonts');
+            for (var i = 0; i < fonts.options.length; i++) {
+                if (fonts.options[i].value == self.labels[self.selectedLabel].f) {
+                    fonts.selectedIndex = i;
+                    break;
+                }
+            }
+            document.getElementById('colorPicker').value = self.labels[self.selectedLabel].c;
+            document.getElementById('bold').checked = self.labels[self.selectedLabel].b;
+            document.getElementById('italic').checked = self.labels[self.selectedLabel].i;
+        },
+        
+        clearSelectedLabel: function() {
+            var self = this;
+            self.selectedLabel = null;
+            document.getElementById('labelToolbar').style.display = 'none';
+        },
+
+        setScale: function(scale) {
+            var self = this;
+            self.scale = scale;
+        },
+
+        updateFontColor: function(callback, event) {
+            var self = this;
+            self.labels[self.selectedLabel].c = event.srcElement.value;
+            callback();            
+        },
+
+        updateBold: function(callback, event) {
+            var self = this;
+            console.log(event);
+            self.labels[self.selectedLabel].b = event.srcElement.checked;
+            callback();
+        },
+
+        updateItalic: function(callback, event) {
+            var self = this;
+            self.labels[self.selectedLabel].i = event.srcElement.checked;
+            callback();
+        },
+
+        updateFontSize: function(callback, event) {
+            var self = this;
+            self.labels[self.selectedLabel].p = event.srcElement.selectedOptions[0].text;
+            callback();
+        },
+
+        updateFont: function(callback, event) {
+            var self = this;
+            self.labels[self.selectedLabel].f = event.srcElement.selectedOptions[0].value;
+            callback();
+        },
+
+        updateLabelText: function(callback, event) {
+            var self = this;
+            self.labels[self.selectedLabel].v = event.srcElement.value;
+            callback();
+        },
+
+        deleteSelectedLabel: function() {
+            var self = this;
+            self.labels.splice(self.selectedLabel, 1);
+            self.clearSelectedLabel();
+        },
+
+        startLabel: function(x, y) {
+            var self = this;
+            self.labels.push({x: (x - self.offset.x) / self.scale, y: (y - self.offset.y) / self.scale, v: 'Testing', f: 'Arial', p: 32, c: '#000000', b: false, i: false});
+            self.setSelectedLabel(self.labels.length - 1);
+        },
+
+        updateOffset: function(x, y) {
+            var self = this;
+            self.offset.x += x;
+            self.offset.y += y;
+        },
+
+        render: function() {
+            var self = this;
+            for(var label in self.labels) {
+                var font = self.labels[label].b ? "bold " : "";
+                font += self.labels[label].i ? "italic " : "";
+                font += self.labels[label].p * self.scale + "pt " + self.labels[label].f;
+                
+                self.context.font = font;
+                self.context.fillStyle = self.labels[label].c;
+                self.context.fillText(self.labels[label].v, self.labels[label].x * self.scale + self.offset.x, self.labels[label].y * self.scale + self.offset.y);                
+            }
+
+            if (self.selectedLabel !== null) {
+                var font = self.labels[self.selectedLabel].b ? "bold " : "";
+                font += self.labels[self.selectedLabel].i ? "italic " : "";
+                font += self.labels[self.selectedLabel].p * self.scale + "pt " + self.labels[self.selectedLabel].f;
+                
+                self.context.font = font;
+                var metrics = self.context.measureText(self.labels[self.selectedLabel].v);
+                self.context.strokeRect(self.labels[self.selectedLabel].x * self.scale + self.offset.x - 1,
+                    self.labels[self.selectedLabel].y * self.scale + self.offset.y - 1 - (self.labels[self.selectedLabel].p * self.scale),
+                    metrics.width + 1, self.labels[self.selectedLabel].p * self.scale + 1);
+            }
+        },
+
+        getPointInBoundingBox: function(x, y) {
+            var self = this;
+            self.clearSelectedLabel();
+            for(var label in self.labels) {
+                var font = self.labels[label].b ? "bold " : "";
+                font += self.labels[label].i ? "italic " : "";
+                font += self.labels[label].p * self.scale + "pt " + self.labels[label].f;
+                
+                self.context.font = font;
+                if (self.labels[label].x * self.scale + self.offset.x < x && 
+                    x < self.labels[label].x * self.scale + self.offset.x + self.context.measureText(self.labels[label].v).width && 
+                    self.labels[label].y * self.scale + self.offset.y - self.labels[label].p < y && 
+                    y < self.labels[label].y * self.scale + self.offset.y) {
+                        self.setSelectedLabel(label);
+                }
+            }
+        },
+
+        onMouseDown: function(event, callback) {
+            var self = this;
+            self.getPointInBoundingBox(event.x, event.y);
+            if (self.selectedLabel) {
+                self.canvas.style.cursor = "move";
+            }
+            if (!self.selectedLabel) {
+                self.startLabel(event.x, event.y);
+            }
+            callback();
+        },
+
+        onMouseMove: function(event, callback) {
+            var self = this;
+            if (self.selectedLabel) {
+                self.labels[self.selectedLabel].x += event.movementX / self.scale;
+                self.labels[self.selectedLabel].y += event.movementY / self.scale;
+                callback();
+            }
+        },
+
+        onMouseUp: function(event, callback) {
+            var self = this;
+            self.canvas.style.cursor = "default";
+            callback();
+        }
+    }
+
     function RoadController(roads, canvas, context) {
         var self = this;
         self.roads = roads;
@@ -922,8 +1100,9 @@ tg = (function() {
         self.terrainController;
         self.roadController;
         self.riverController;
+        self.labelController;
 
-        self.initialize(mapData.tiles, mapData.roads, mapData.rivers);
+        self.initialize(mapData.tiles, mapData.roads, mapData.rivers, mapData.labels);
     }
 
     MapViewModel.prototype = {
@@ -939,6 +1118,7 @@ tg = (function() {
             }
             self.roadController.clearSelectedRoad();
             self.riverController.clearSelectedRiver();
+            self.labelController.clearSelectedLabel();
             self.render();
             document.getElementById(self.activeLayer + "Layer").classList.add('active');
         },
@@ -953,6 +1133,10 @@ tg = (function() {
                 self.riverController.clearSelectedRiver();
                 self.render();
             }
+            if (self.activeLayer == 'label') {
+                self.labelController.clearSelectedLabel();
+                self.render();
+            }
         },
 
         deleteSelected: function() {
@@ -965,6 +1149,10 @@ tg = (function() {
                 self.riverController.deleteSelectedRiver();
                 self.mapUpdated();
             }
+            if (self.activeLayer == 'label') {
+                self.labelController.deleteSelectedLabel();
+                self.mapUpdated();
+            }
         },
 
         mouseDownPrimary: function(event) {
@@ -974,6 +1162,9 @@ tg = (function() {
             }
             if (self.activeLayer == 'river') {
                 self.riverController.onMouseDown(event, self.mapUpdated.bind(self));
+            }
+            if (self.activeLayer == 'label') {
+                self.labelController.onMouseDown(event, self.mapUpdated.bind(self));
             }
         },
 
@@ -991,6 +1182,9 @@ tg = (function() {
             if (self.activeLayer == 'river') {
                 self.riverController.onMouseMove(event, self.render.bind(self));
             }
+            if (self.activeLayer == 'label') {
+                self.labelController.onMouseMove(event, self.render.bind(self));
+            }
         },
 
         mouseMoveSecondary: function() {
@@ -1005,6 +1199,9 @@ tg = (function() {
             }
             if (self.activeLayer == 'river') {
                 self.riverController.onMouseUp(event, self.mapUpdated.bind(self));
+            }
+            if (self.activeLayer == 'label') {
+                self.labelController.onMouseUp(event, self.mapUpdated.bind(self));
             }
         },
 
@@ -1033,6 +1230,7 @@ tg = (function() {
             self.terrainController.updateOffset(x, y);
             self.roadController.updateOffset(x, y);
             self.riverController.updateOffset(x, y);
+            self.labelController.updateOffset(x, y);
             self.render();
         },
 
@@ -1047,7 +1245,7 @@ tg = (function() {
             var self = this;
             self.render();
             tg.saveMap({id: self.id, name: self.name, tiles: self.terrainController.getTiles(),
-                roads: self.roadController.getRoads(), rivers: self.riverController.getRivers()});
+                roads: self.roadController.getRoads(), rivers: self.riverController.getRivers(), labels: self.labelController.getLabels()});
         },
 
         render: function() {
@@ -1056,6 +1254,7 @@ tg = (function() {
             self.terrainController.render();
             self.riverController.render();
             self.roadController.render();
+            self.labelController.render();
         },
 
         zoomIn: function() {
@@ -1064,6 +1263,7 @@ tg = (function() {
             self.terrainController.setScale(self.scale);
             self.roadController.setScale(self.scale);
             self.riverController.setScale(self.scale);
+            self.labelController.setScale(self.scale);
             self.render();
         },
 
@@ -1073,6 +1273,7 @@ tg = (function() {
             self.terrainController.setScale(self.scale);
             self.roadController.setScale(self.scale);
             self.riverController.setScale(self.scale);
+            self.labelController.setScale(self.scale);
             self.render();
         },
 
@@ -1115,7 +1316,7 @@ tg = (function() {
             };
         },
 
-        initialize: function(tiles, roads, rivers) {
+        initialize: function(tiles, roads, rivers, labels) {
             var self = this;
             var tulpagraphyContainer = document.getElementById('tulpagraphy');
             self.canvas = document.createElement('canvas');
@@ -1123,7 +1324,11 @@ tg = (function() {
             self.context = self.canvas.getContext('2d');
             var toolbar = document.createElement('div');
             toolbar.setAttribute('id', 'toolbar');
+            toolbar.setAttribute('class', 'toolbar');
             self.terrainController = new TerrainController(tiles, self.canvas, self.context);
+            self.roadController = new RoadController(roads, self.canvas, self.context);
+            self.riverController = new RiverController(rivers, self.canvas, self.context);
+            self.labelController = new LabelController(labels, self.canvas, self.context);
             self.terrainController.terrain.forEach(function(item) {
                 var tool = document.createElement('img');
                 tool.setAttribute('src', item.imageDirectory + 'tool.png');
@@ -1132,9 +1337,61 @@ tg = (function() {
                 tool.addEventListener('click', self.terrainController.setSelectedTerrainId.bind(self.terrainController, item.id));
                 toolbar.appendChild(tool);
             });
-            self.roadController = new RoadController(roads, self.canvas, self.context);
-            self.riverController = new RiverController(rivers, self.canvas, self.context);
             tulpagraphyContainer.appendChild(toolbar);
+            
+            var labelToolbar = document.createElement('div');
+            labelToolbar.setAttribute('id', 'labelToolbar');
+            labelToolbar.setAttribute('class', 'toolbar');
+            var text = document.createElement('input');
+            text.setAttribute('type', 'text');
+            text.setAttribute('id', 'labelText');
+            text.addEventListener('input', self.labelController.updateLabelText.bind(self.labelController, self.mapUpdated.bind(self)));
+            labelToolbar.appendChild(text);
+
+            var fontSize = document.createElement('select');
+            fontSize.setAttribute('id', 'fontSize');
+            for (var i = 16; i <=60; i+=4) {
+                var sizeOption = document.createElement('option');
+                sizeOption.text = i;
+                fontSize.add(sizeOption);
+            }
+            fontSize.addEventListener('change', self.labelController.updateFontSize.bind(self.labelController, self.mapUpdated.bind(self)));
+            labelToolbar.appendChild(fontSize);
+            var fonts = document.createElement('select');
+            fonts.setAttribute('id', 'fonts');
+            var fontNames = [{text: "Arial", value: "Arial"}, {text: "Arial Black", value: "'Arial Black'"}, {text: "Comic Sans MS", value: "'Comic Sans MS'"},
+                             {text: "Courier New", value: "'Courier New'"}, {text: "Helvetica", value: "helvetica"}, {text: "Impact", value: "hoge,impact"}, 
+                             {text: "Times New Roman", value: "'Times New Roman'"}, {text: "Trebuchet MS", value: "'Trebuchet MS'"}, {text: "Verdana", value: "Verdana"}]
+            for (var i = 0; i < fontNames.length; i++) {
+                var fontOption = document.createElement('option');
+                fontOption.value = fontNames[i].value;
+                fontOption.text = fontNames[i].text;
+                fonts.add(fontOption);
+            }
+            fonts.addEventListener('change', self.labelController.updateFont.bind(self.labelController, self.mapUpdated.bind(self)));
+            labelToolbar.appendChild(fonts);
+
+            var colorPicker = document.createElement('input');
+            colorPicker.setAttribute('value', '#000000');
+            colorPicker.setAttribute('type', 'color');
+            colorPicker.setAttribute('id', 'colorPicker');
+            labelToolbar.appendChild(colorPicker);
+            colorPicker.addEventListener('change', self.labelController.updateFontColor.bind(self.labelController, self.mapUpdated.bind(self)));
+
+            var boldCheckbox = document.createElement('input');
+            boldCheckbox.setAttribute('type', 'checkbox');
+            boldCheckbox.setAttribute('id', 'bold');
+            labelToolbar.appendChild(boldCheckbox);
+            boldCheckbox.addEventListener('click', self.labelController.updateBold.bind(self.labelController, self.mapUpdated.bind(self)));
+
+            var italicCheckbox = document.createElement('input');
+            italicCheckbox.setAttribute('type', 'checkbox');
+            italicCheckbox.setAttribute('id', 'italic');
+            labelToolbar.appendChild(italicCheckbox);
+            italicCheckbox.addEventListener('click', self.labelController.updateItalic.bind(self.labelController, self.mapUpdated.bind(self)));
+
+            tulpagraphyContainer.appendChild(labelToolbar);
+            document.getElementById('labelToolbar').style.display = 'none';
 
             self.bindActions();
 
@@ -1227,7 +1484,7 @@ tg = (function() {
 
         createNewMap: function() {
             var id = this.getNextId();
-            localStorage.setItem(id, JSON.stringify({id: id, name: 'untitled', tiles: [], roads: [], rivers:[]}));
+            localStorage.setItem(id, JSON.stringify({id: id, name: 'untitled', tiles: [], roads: [], rivers:[], labels:[]}));
             return id;
         },
 
