@@ -977,7 +977,7 @@ tg = (function() {
             if (tile.length > 0) {
                 var terrain = self.getTerrainById(tile[0].t);
                 if (terrain.baseZIndex > zIndex) {
-                    self.m2_context.drawImage(terrain.overlay[i].element, 0, 0, self.getTileWidth(), self.getTileHeight());
+                    self.m2_context.drawImage(terrain.overlay[i].element, 0, 0);
                 }
             }
         },
@@ -1001,7 +1001,7 @@ tg = (function() {
                 var ocean = self.getTerrainById(1);
                 if (terrain.id !== 0 && terrain.baseZIndex > zIndex) {
                     self.m_context.globalCompositeOperation = "lighten";
-                    self.m_context.drawImage(ocean.overlay[i].element, 0, 0, self.getTileWidth(), self.getTileHeight());
+                    self.m_context.drawImage(ocean.overlay[i].element, 0, 0);
                 }
             }
         },
