@@ -155,7 +155,7 @@ tg = (function() {
 
         startLabel: function(x, y) {
             var self = this;
-            self.labels.push({x: (x - self.offset.x) / self.scale, y: (y - self.offset.y) / self.scale, v: 'Testing', f: 'Arial', p: 32, c: '#000000', b: false, i: false});
+            self.labels.push({x: (x - self.offset.x) / self.scale, y: (y - self.offset.y) / self.scale, v: 'Label', f: 'Arial', p: 32, c: '#000000', b: false, i: false});
             self.setSelectedLabel(self.labels.length - 1);
         },
 
@@ -183,6 +183,7 @@ tg = (function() {
                 font += self.labels[self.selectedLabel].p * self.scale + "pt " + self.labels[self.selectedLabel].f;
                 
                 self.context.font = font;
+                self.context.strokeStyle = '#C00';
                 var metrics = self.context.measureText(self.labels[self.selectedLabel].v);
                 self.context.strokeRect(self.labels[self.selectedLabel].x * self.scale + self.offset.x - 1,
                     self.labels[self.selectedLabel].y * self.scale + self.offset.y - 1 - (self.labels[self.selectedLabel].p * self.scale),
@@ -1377,12 +1378,18 @@ tg = (function() {
             labelToolbar.appendChild(colorPicker);
             colorPicker.addEventListener('change', self.labelController.updateFontColor.bind(self.labelController, self.mapUpdated.bind(self)));
 
+            var boldLabel = document.createElement('b');
+            boldLabel.innerText = "B";
+            labelToolbar.appendChild(boldLabel);
             var boldCheckbox = document.createElement('input');
             boldCheckbox.setAttribute('type', 'checkbox');
             boldCheckbox.setAttribute('id', 'bold');
             labelToolbar.appendChild(boldCheckbox);
             boldCheckbox.addEventListener('click', self.labelController.updateBold.bind(self.labelController, self.mapUpdated.bind(self)));
 
+            var italicLabel = document.createElement('i');
+            italicLabel.innerText = "I";
+            labelToolbar.appendChild(italicLabel);
             var italicCheckbox = document.createElement('input');
             italicCheckbox.setAttribute('type', 'checkbox');
             italicCheckbox.setAttribute('id', 'italic');
