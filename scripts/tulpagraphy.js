@@ -58,6 +58,150 @@ tg = (function() {
         }
     }
 
+    function LandmarkController(landmarks, canvas, context) {
+        var self = this;
+        self.landmarks = landmarks;
+        self.landmarkOptions;
+        self.canvas = canvas;
+        self.context = context;
+        self.selectedLandmark = null;
+        self.selectedLandmarkOption = null;
+        self.scale = 1;
+        self.offset = {x: 0, y: 0};
+
+        self.initialize();
+    }
+
+    LandmarkController.prototype = {
+        initialize: function() {
+            var self = this;
+            if (!self.landmarkOptions || !self.landmarkOptions.length) {
+                self.landmarkOptions = [
+                    new Landmark(0, 'Marker', '/images/landmarks/marker.png')
+                ]
+            }
+        },
+
+        landmarkOptionsLoaded: function() {
+            var self = this;
+            var loaded = true;
+            self.landmarkOptions.forEach(landmark => {
+                if (!landmark.loaded()) {
+                    loaded = false;
+                    return;
+                }
+            });
+            return loaded;
+        },
+
+        getLandmarks: function() {
+            var self = this;
+            return self.landmarks;
+        },
+
+        setScale: function(scale) {
+            var self = this;
+            self.scale = scale;
+        },
+
+        getLandmarkById: function(id) {
+            var self = this;
+            return self.landmarkOptions.find(item => item.id == id);
+        },
+
+        setSelectedLandmarkById: function(id) {
+            var self = this;
+            self.selectedLandmarkOption = id;
+        },
+        
+        clearSelectedLandmark: function() {
+            var self = this;
+            self.selectedLandmark = null;
+        },
+        
+        deleteSelectedLandmark: function() {
+            var self = this;
+            if (self.selectedLandmark !== null) {
+                self.landmarks.splice(self.selectedLandmark, 1);
+                self.selectedLandmark = null;    
+            }
+        },
+
+        placeLandmark: function(x, y) {
+            var self = this;
+            self.selectedLandmark = self.landmarks.length;
+            self.landmarks.push({x: (x - self.offset.x) / self.scale, y: (y - self.offset.y) / self.scale, l: self.selectedLandmarkOption });
+        },
+
+        updateOffset: function(x, y) {
+            var self = this;
+            self.offset.x += x;
+            self.offset.y += y;
+        },
+
+        render: function() {
+            var self = this;
+            for (var landmark in self.landmarks) {
+                var landmarkOption = self.getLandmarkById(self.landmarks[landmark].l);
+                
+                self.context.drawImage(landmarkOption.image.element, self.landmarks[landmark].x * self.scale + self.offset.x,
+                    self.landmarks[landmark].y * self.scale + self.offset.y, 
+                    landmarkOption.image.element.width * self.scale, landmarkOption.image.element.height * self.scale);
+            }
+            if (self.selectedLandmark !== null) {
+                var landmarkOption = self.getLandmarkById(self.landmarks[self.selectedLandmark].l);
+                self.context.lineWidth = 1;
+                self.context.strokeStyle = '#C00';
+
+                self.context.strokeRect(self.landmarks[self.selectedLandmark].x * self.scale + self.offset.x,
+                    self.landmarks[self.selectedLandmark].y * self.scale + self.offset.y,
+                    landmarkOption.image.element.width, landmarkOption.image.element.height);
+            }
+        },
+        
+        getPointInBoundingBox: function(x, y) {
+            var self = this;
+
+            self.selectedLandmark = null;
+            for(var landmark in self.landmarks) {
+                var landmarkOption = self.getLandmarkById(self.landmarks[landmark].l);
+                if (self.landmarks[landmark].x * self.scale + self.offset.x < x && 
+                    x < self.landmarks[landmark].x * self.scale + self.offset.x + landmarkOption.image.element.width && 
+                    y > self.landmarks[landmark].y * self.scale + self.offset.y &&
+                    self.landmarks[landmark].y * self.scale + self.offset.y + landmarkOption.image.element.height > y) {
+                        self.selectedLandmark = landmark;
+                }
+            }
+        },
+
+        onMouseDown: function(event, callback) {
+            var self = this;
+            self.getPointInBoundingBox(event.x, event.y);
+            if (self.selectedLandmark) {
+                self.canvas.style.cursor = "move";
+            }
+            if (!self.selectedLandmark) {
+                self.placeLandmark(event.x, event.y);
+            }
+            callback();
+        },
+
+        onMouseMove: function(event, callback) {
+            var self = this;
+            if (self.selectedLandmark) {
+                self.landmarks[self.selectedLandmark].x += event.movementX / self.scale;
+                self.landmarks[self.selectedLandmark].y += event.movementY / self.scale;
+                callback();
+            }
+        },
+
+        onMouseUp: function(event, callback) {
+            var self = this;
+            self.canvas.style.cursor = "default";
+            callback();
+        }
+    }
+
     function LabelController(labels, canvas, context) {
         var self = this;
         self.labels = labels;
@@ -149,8 +293,10 @@ tg = (function() {
 
         deleteSelectedLabel: function() {
             var self = this;
-            self.labels.splice(self.selectedLabel, 1);
-            self.clearSelectedLabel();
+            if (self.selectedLabel !== null) {
+                self.labels.splice(self.selectedLabel, 1);
+                self.clearSelectedLabel();    
+            }
         },
 
         startLabel: function(x, y) {
@@ -183,8 +329,9 @@ tg = (function() {
                 font += self.labels[self.selectedLabel].p * self.scale + "pt " + self.labels[self.selectedLabel].f;
                 
                 self.context.font = font;
-                self.context.strokeStyle = '#C00';
                 var metrics = self.context.measureText(self.labels[self.selectedLabel].v);
+                self.context.strokeStyle = '#C00';
+                self.context.lineWidth = 1;
                 self.context.strokeRect(self.labels[self.selectedLabel].x * self.scale + self.offset.x - 1,
                     self.labels[self.selectedLabel].y * self.scale + self.offset.y - 1 - (self.labels[self.selectedLabel].p * self.scale),
                     metrics.width + 1, self.labels[self.selectedLabel].p * self.scale + 1);
@@ -1101,8 +1248,9 @@ tg = (function() {
         self.roadController;
         self.riverController;
         self.labelController;
+        self.landmarkController;
 
-        self.initialize(mapData.tiles, mapData.roads, mapData.rivers, mapData.labels);
+        self.initialize(mapData.tiles, mapData.roads, mapData.rivers, mapData.labels, mapData.landmarks);
     }
 
     MapViewModel.prototype = {
@@ -1116,9 +1264,17 @@ tg = (function() {
             else  {
                 document.getElementById('toolbar').style.display = 'none';
             }
+            
+            if (self.activeLayer == 'landmark') {
+                document.getElementById('landmarkToolbar').style.display = 'block';
+            }
+            else  {
+                document.getElementById('landmarkToolbar').style.display = 'none';
+            }
             self.roadController.clearSelectedRoad();
             self.riverController.clearSelectedRiver();
             self.labelController.clearSelectedLabel();
+            self.landmarkController.clearSelectedLandmark();
             self.render();
             document.getElementById(self.activeLayer + "Layer").classList.add('active');
         },
@@ -1137,6 +1293,10 @@ tg = (function() {
                 self.labelController.clearSelectedLabel();
                 self.render();
             }
+            if (self.activeLayer == 'landmark') {
+                self.landmarkController.clearSelectedLabel();
+                self.render();
+            }
         },
 
         deleteSelected: function() {
@@ -1153,6 +1313,10 @@ tg = (function() {
                 self.labelController.deleteSelectedLabel();
                 self.mapUpdated();
             }
+            if (self.activeLayer == 'landmark') {
+                self.landmarkController.deleteSelectedLandmark();
+                self.mapUpdated();
+            }
         },
 
         mouseDownPrimary: function(event) {
@@ -1165,6 +1329,9 @@ tg = (function() {
             }
             if (self.activeLayer == 'label') {
                 self.labelController.onMouseDown(event, self.mapUpdated.bind(self));
+            }
+            if (self.activeLayer == 'landmark') {
+                self.landmarkController.onMouseDown(event, self.mapUpdated.bind(self));
             }
         },
 
@@ -1185,6 +1352,9 @@ tg = (function() {
             if (self.activeLayer == 'label') {
                 self.labelController.onMouseMove(event, self.render.bind(self));
             }
+            if (self.activeLayer == 'landmark') {
+                self.landmarkController.onMouseMove(event, self.render.bind(self));
+            }
         },
 
         mouseMoveSecondary: function() {
@@ -1202,6 +1372,9 @@ tg = (function() {
             }
             if (self.activeLayer == 'label') {
                 self.labelController.onMouseUp(event, self.mapUpdated.bind(self));
+            }
+            if (self.activeLayer == 'landmark') {
+                self.landmarkController.onMouseUp(event, self.mapUpdated.bind(self));
             }
         },
 
@@ -1231,6 +1404,7 @@ tg = (function() {
             self.roadController.updateOffset(x, y);
             self.riverController.updateOffset(x, y);
             self.labelController.updateOffset(x, y);
+            self.landmarkController.updateOffset(x, y);
             self.render();
         },
 
@@ -1245,7 +1419,7 @@ tg = (function() {
             var self = this;
             self.render();
             tg.saveMap({id: self.id, name: self.name, tiles: self.terrainController.getTiles(),
-                roads: self.roadController.getRoads(), rivers: self.riverController.getRivers(), labels: self.labelController.getLabels()});
+                roads: self.roadController.getRoads(), rivers: self.riverController.getRivers(), labels: self.labelController.getLabels(), landmarks: self.landmarkController.getLandmarks()});
         },
 
         render: function() {
@@ -1255,6 +1429,7 @@ tg = (function() {
             self.riverController.render();
             self.roadController.render();
             self.labelController.render();
+            self.landmarkController.render();
         },
 
         zoomIn: function() {
@@ -1264,6 +1439,7 @@ tg = (function() {
             self.roadController.setScale(self.scale);
             self.riverController.setScale(self.scale);
             self.labelController.setScale(self.scale);
+            self.landmarkController.setScale(self.scale);
             self.render();
         },
 
@@ -1274,6 +1450,7 @@ tg = (function() {
             self.roadController.setScale(self.scale);
             self.riverController.setScale(self.scale);
             self.labelController.setScale(self.scale);
+            self.landmarkController.setScale(self.scale);
             self.render();
         },
 
@@ -1316,7 +1493,7 @@ tg = (function() {
             };
         },
 
-        initialize: function(tiles, roads, rivers, labels) {
+        initialize: function(tiles, roads, rivers, labels, landmarks) {
             var self = this;
             var tulpagraphyContainer = document.getElementById('tulpagraphy');
             self.canvas = document.createElement('canvas');
@@ -1329,6 +1506,7 @@ tg = (function() {
             self.roadController = new RoadController(roads, self.canvas, self.context);
             self.riverController = new RiverController(rivers, self.canvas, self.context);
             self.labelController = new LabelController(labels, self.canvas, self.context);
+            self.landmarkController = new LandmarkController(landmarks, self.canvas, self.context);
             self.terrainController.terrain.forEach(function(item) {
                 var tool = document.createElement('img');
                 tool.setAttribute('src', item.imageDirectory + 'tool.png');
@@ -1339,6 +1517,21 @@ tg = (function() {
             });
             tulpagraphyContainer.appendChild(toolbar);
             
+            var landmarkToolbar = document.createElement('div');
+            landmarkToolbar.setAttribute('id', 'landmarkToolbar');
+            landmarkToolbar.setAttribute('class', 'toolbar');
+            self.landmarkController.landmarkOptions.forEach(function(item) {
+                var tool = document.createElement('img');
+                tool.setAttribute('src', item.imagePath);
+                tool.setAttribute('title', item.name);
+                tool.setAttribute('alt', item.name);
+                tool.addEventListener('click', self.landmarkController.setSelectedLandmarkById.bind(self.landmarkController, item.id));
+                landmarkToolbar.appendChild(tool);
+            });
+            tulpagraphyContainer.appendChild(landmarkToolbar);
+            document.getElementById('landmarkToolbar').style.display = 'none';
+
+
             var labelToolbar = document.createElement('div');
             labelToolbar.setAttribute('id', 'labelToolbar');
             labelToolbar.setAttribute('class', 'toolbar');
@@ -1448,6 +1641,22 @@ tg = (function() {
         }
     };
 
+    function Landmark(id, name, imagePath) {
+        var self = this;
+
+        self.id = id;
+        self.name = name;
+        self.imagePath = imagePath;
+        self.image = new MapImage(imagePath);
+    }
+
+    Landmark.prototype = {
+        loaded: function() {
+            var self = this;
+            return self.image.loaded;
+        }
+    };
+
     function MapImage(url) {
         var self = this;
 
@@ -1490,7 +1699,7 @@ tg = (function() {
 
         createNewMap: function() {
             var id = this.getNextId();
-            localStorage.setItem(id, JSON.stringify({id: id, name: 'untitled', tiles: [], roads: [], rivers:[], labels:[]}));
+            localStorage.setItem(id, JSON.stringify({id: id, name: 'untitled', tiles: [], roads: [], rivers:[], labels:[], landmarks:[]}));
             return id;
         },
 
