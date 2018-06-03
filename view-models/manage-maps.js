@@ -8,14 +8,14 @@
             self.clearMaps = function (map) {
                 if (confirm('You really want to clear all the maps?')) {
                     tg.clearMaps();
-                    document.reload();
+                    location.reload(false);
                 }
             };
 
             self.deleteMap = function (map) {
                 try {
                     if (tg.deleteMap(map)) {
-                        document.reload();
+                        location.reload(false);
                     }
                 }
                 catch (e) {

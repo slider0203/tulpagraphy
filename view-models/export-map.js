@@ -11,8 +11,8 @@ function getId() {
     return id;
 };
 
-function exportMap() {
-    window.location = '/views/export-map.html?id=' + getId();
+function editMap() {
+    window.location = '/views/edit-map.html?id=' + getId();
 }
 
-tg.initializeMap(getId());
+tg.exportMap(getId());

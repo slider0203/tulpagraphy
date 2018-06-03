@@ -133,3 +133,73 @@ body {
 	opacity: 100;
 	transition: opacity 0.3s linear;
 }
+
+/* Menu */
+
+.menu .active {
+	background-color: #a6cbff;
+}
+
+.menu {
+	position: absolute;
+	left: 10;
+	top: 0;
+	z-index: 100;
+	width: 38px;
+	box-shadow: 0 3px 5px -1px rgba(0, 0, 0, .2), 0 6px 10px 0 rgba(0, 0, 0, .14), 0 1px 18px 0 rgba(0, 0, 0, .12);
+	padding: 0;
+}
+
+.menu li {
+	pointer-events: none;
+	display: inline-block;
+	list-style: none;
+	transform: translateZ(0);
+}
+
+.menu span img {
+	display: inline-block;
+	background-color: white;
+	pointer-events: auto;
+}
+
+.menu span img:hover {
+	background-color: #63a4ff;
+	cursor: hand;
+}
+
+.menu li ul {
+	position: absolute;
+	left: 50;
+	top: 0;
+	display: inline-block;
+	padding: 0;
+	z-index: 100;
+	visibility: hidden;
+	opacity: 0;
+	transition: opacity 0.5s linear, visibility 0.5s linear;
+	box-shadow: 0 3px 5px -1px rgba(0, 0, 0, .2), 0 6px 10px 0 rgba(0, 0, 0, .14), 0 1px 18px 0 rgba(0, 0, 0, .12);
+}
+
+.menu li ul:after, .menu li ul:before {
+	right: 100%;
+	top: 10;
+	border: solid transparent;
+	content: " ";
+	height: 0;
+	width: 0;
+	position: absolute;
+	pointer-events: none;
+}
+
+.menu li ul:before {
+	border-color: rgba(255, 255, 255, 0);
+	border-right-color: #ffffff;
+	border-width: 7px;
+}
+
+.menu li:hover ul {
+	visibility: visible;
+	opacity: 100;
+	transition: opacity 0.3s linear;
+}

@@ -262,7 +262,6 @@ tg = (function() {
 
         updateBold: function(callback, event) {
             var self = this;
-            console.log(event);
             self.labels[self.selectedLabel].b = event.srcElement.checked;
             callback();
         },
@@ -995,6 +994,39 @@ tg = (function() {
             return self.tileWidth * self.scale;
         },
 
+        getMappedTerrainArea: function() {
+            var self = this;
+            var xMin, xMax, yMin, yMinEven, yMax, yMaxEven;
+
+            self.tiles.forEach(function(tile) {
+                if (xMin == null || xMin > tile.x) {
+                    xMin = tile.x;
+                }
+                if (xMax == null || xMax < tile.x) {
+                    xMax = tile.x;
+                }
+                if (yMin == null || yMin >= tile.y) {
+                    yMinEven = !yMinEven || Math.abs(tile.x) % 2 == 1;
+                    yMin = tile.y;
+                }
+                if (yMax == null || yMax <= tile.y) {
+                    yMaxEven = !yMaxEven || Math.abs(tile.x) % 2 == 1;
+                    yMax = tile.y;
+                }
+            });
+            var width = Math.abs(xMin - xMax) * (.75 * self.getTileWidth()) + self.getTileWidth();
+            var height = Math.abs(yMin - yMax) * self.getTileHeight() + self.getTileHeight();
+            height -= yMinEven && !yMaxEven ? self.getTileHeight() / 2 : 0;
+            
+            var xOffset = -xMin * (.75 * self.getTileWidth()) + self.getTileWidth() / 2;
+            var yOffset = -yMin * self.getTileHeight() + self.getTileHeight() / 2;
+            yOffset -= yMinEven ? self.getTileHeight() / 2 : 0;
+            
+            return { width: width,
+                     height: height,
+                     offset: { x: xOffset, y: yOffset } }
+        },
+
         getTiles: function() {
             var self = this;
             return self.tiles.filter(tile => tile.t != 0);
@@ -1048,7 +1080,6 @@ tg = (function() {
             }
             var features = self.getTerrainById(self.getSelectedTerrainId()).images.length - 2;
             var number = Math.round(features * Math.random()) + 1;
-            console.log(number);
             return number;
         },
 
@@ -1419,7 +1450,8 @@ tg = (function() {
             var self = this;
             self.render();
             tg.saveMap({id: self.id, name: self.name, tiles: self.terrainController.getTiles(),
-                roads: self.roadController.getRoads(), rivers: self.riverController.getRivers(), labels: self.labelController.getLabels(), landmarks: self.landmarkController.getLandmarks()});
+                roads: self.roadController.getRoads(), rivers: self.riverController.getRivers(),
+                labels: self.labelController.getLabels(), landmarks: self.landmarkController.getLandmarks()});
         },
 
         render: function() {
@@ -1605,6 +1637,65 @@ tg = (function() {
         }
     }
 
+    function MapExportViewModel(mapData) {
+        var self = this;
+        self.id = mapData.id;
+        self.name = mapData.name;
+        self.canvas;
+        self.context;
+        self.terrainController;
+        self.roadController;
+        self.riverController;
+        self.labelController;
+        self.landmarkController;
+
+        self.initialize(mapData.tiles, mapData.roads, mapData.rivers, mapData.labels, mapData.landmarks);
+    }
+
+    MapExportViewModel.prototype = {
+        offset: function(x, y) {
+            var self = this;
+            self.terrainController.updateOffset(x, y);
+            self.roadController.updateOffset(x, y);
+            self.riverController.updateOffset(x, y);
+            self.labelController.updateOffset(x, y);
+            self.landmarkController.updateOffset(x, y);
+        },
+
+        render: function() {
+            var self = this;
+            var terrainArea = self.terrainController.getMappedTerrainArea();
+            self.canvas.width = terrainArea.width;
+            self.canvas.height = terrainArea.height;
+            self.offset(terrainArea.offset.x, terrainArea.offset.y);
+            self.context.clearRect(0, 0, self.canvas.width, self.canvas.height);
+            self.terrainController.render();
+            self.riverController.render();
+            self.roadController.render();
+            self.labelController.render();
+            self.landmarkController.render();
+        },
+
+        initialize: function(tiles, roads, rivers, labels, landmarks) {
+            var self = this;
+            var tulpagraphyContainer = document.getElementById('tulpagraphy');
+            self.canvas = document.createElement('canvas');
+            tulpagraphyContainer.appendChild(self.canvas);
+            self.context = self.canvas.getContext('2d');
+            self.terrainController = new TerrainController(tiles, self.canvas, self.context);
+            self.roadController = new RoadController(roads, self.canvas, self.context);
+            self.riverController = new RiverController(rivers, self.canvas, self.context);
+            self.labelController = new LabelController(labels, self.canvas, self.context);
+            self.landmarkController = new LandmarkController(landmarks, self.canvas, self.context);
+            var loader = setInterval(function() {
+                if (self.terrainController.terrainLoaded()) {
+                    clearInterval(loader);
+                    self.render();
+                }
+            }, 100);
+        }
+    }
+
     function Terrain(id, name, imageDirectory, zIndex, number) {
         var self = this;
 
@@ -1683,6 +1774,10 @@ tg = (function() {
             this.mapViewModel = new MapViewModel(this.getMapById(id));
         },
 
+        exportMap: function(id) {
+            new MapExportViewModel(this.getMapById(id));
+        },
+
         getMaps: function () {
             var maps = [];
             
@@ -1720,7 +1815,7 @@ tg = (function() {
         },
 
         clearMaps: function () {
-            delete localStorage.maps;
+            localStorage.clear();
         }
     };
     return new Tulpagraphy();
