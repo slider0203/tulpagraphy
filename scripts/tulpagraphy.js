@@ -77,7 +77,9 @@ tg = (function() {
             var self = this;
             if (!self.landmarkOptions || !self.landmarkOptions.length) {
                 self.landmarkOptions = [
-                    new Landmark(0, 'Marker', '/images/landmarks/marker.png')
+                    new Landmark(0, 'Marker', '/images/landmarks/marker.png'),
+                    new Landmark(1, 'Goblin Camp', '/images/landmarks/goblin camp.png'),
+                    new Landmark(2, 'Pavilion', '/images/landmarks/pavilion.png')
                 ]
             }
         },
@@ -967,7 +969,8 @@ tg = (function() {
                     new Terrain(0, 'Blank', '/images/terrain/blank/', 500, 0),
                     new Terrain(1, 'Ocean', '/images/terrain/ocean/', 0, 0),
                     new Terrain(10, 'Grass', '/images/terrain/grass/', 500, 0),
-                    new Terrain(11, 'Forest', '/images/terrain/forest/', 500, 2)
+                    new Terrain(11, 'Forest', '/images/terrain/forest/', 500, 2),
+                    new Terrain(12, 'Hills', '/images/terrain/hills/', 500, 0)
                 ]
             }
         },
