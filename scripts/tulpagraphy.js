@@ -1,17 +1,15 @@
 tg = (function() {
     function TulpaEvent() {
-        var self = this;
-        self.button = 0;
+        this.button = 0;
     }
 
     TulpaEvent.prototype = {
         mouseDown: function(primaryCallback, secondaryCallback, event) {
-            var self = this;
-            self.button = event.buttons;
-            if (self.button == 1) {
+            this.button = event.buttons;
+            if (this.button == 1) {
                 primaryCallback(event);
             }
-            if (self.button == 2) {
+            if (this.button == 2) {
                 secondaryCallback(event);
             }
             event.preventDefault();
@@ -19,11 +17,10 @@ tg = (function() {
         },
         
         mouseMove: function(primaryCallback, secondaryCallback, event) {
-            var self = this;
-            if (self.button == 1) {
+            if (this.button == 1) {
                 primaryCallback(event);
             }
-            if (self.button == 2) {
+            if (this.button == 2) {
                 secondaryCallback(event);
             }
             event.preventDefault();
@@ -31,63 +28,55 @@ tg = (function() {
         },
 
         mouseUp: function(primaryCallback, secondaryCallback, event) {
-            var self = this;
-            if (self.button == 1) {
+            if (this.button == 1) {
                 primaryCallback(event);
             }
-            if (self.button == 2) {
+            if (this.button == 2) {
                 secondaryCallback(event);
             }
-            self.button = 0;
+            this.button = 0;
             event.preventDefault();
             return false;
         },
 
         mouseClick: function(callback, event) {
-            var self = this;
             callback(event);
             event.preventDefault();
             return false;
         },
 
         mouseRightClick: function(callback, event) {
-            var self = this;
             callback(event);
             event.preventDefault();
             return false;
         }
-    }
+    };
 
     function LandmarkController(landmarks, canvas, context) {
-        var self = this;
-        self.landmarks = landmarks;
-        self.landmarkOptions;
-        self.canvas = canvas;
-        self.context = context;
-        self.selectedLandmark = null;
-        self.selectedLandmarkOption = null;
-        self.scale = 1;
-        self.offset = {x: 0, y: 0};
+        this.landmarks = landmarks;
+        this.landmarkOptions;
+        this.canvas = canvas;
+        this.context = context;
+        this.selectedLandmark = null;
+        this.selectedLandmarkOption = null;
 
-        self.initialize();
+        this.initialize();
     }
 
     LandmarkController.prototype = {
         initialize: function() {
-            var self = this;
-            if (!self.landmarkOptions || !self.landmarkOptions.length) {
-                self.landmarkOptions = [
+            if (!this.landmarkOptions || !this.landmarkOptions.length) {
+                this.landmarkOptions = [
                     new Landmark(0, 'Marker', '/images/landmarks/marker.png'),
                     new Landmark(1, 'Goblin Camp', '/images/landmarks/goblin camp.png'),
                     new Landmark(2, 'Pavilion', '/images/landmarks/pavilion.png')
-                ]
+                ];
             }
         },
 
         landmarkOptionsLoaded: function() {
-            var self = this;
             var loaded = true;
-            self.landmarkOptions.forEach(landmark => {
+            this.landmarkOptions.forEach(landmark => {
                 if (!landmark.loaded()) {
                     loaded = false;
                     return;
@@ -97,504 +86,444 @@ tg = (function() {
         },
 
         getLandmarks: function() {
-            var self = this;
-            return self.landmarks;
+            return this.landmarks;
         },
 
-        setScale: function(scale) {
-            var self = this;
-            self.scale = scale;
+        scale: function() {
+            return sessionStorage.getItem('scale');
+        },
+
+        offset: function() {
+            return {x: +sessionStorage.getItem('xOffset'), y: +sessionStorage.getItem('yOffset')};
         },
 
         getLandmarkById: function(id) {
-            var self = this;
-            return self.landmarkOptions.find(item => item.id == id);
+            return this.landmarkOptions.find(item => item.id == id);
         },
 
         setSelectedLandmarkById: function(id) {
-            var self = this;
-            self.selectedLandmarkOption = id;
+            this.selectedLandmarkOption = id;
         },
         
         clearSelectedLandmark: function() {
-            var self = this;
-            self.selectedLandmark = null;
+            this.selectedLandmark = null;
         },
         
         deleteSelectedLandmark: function() {
-            var self = this;
-            if (self.selectedLandmark !== null) {
-                self.landmarks.splice(self.selectedLandmark, 1);
-                self.selectedLandmark = null;    
+            if (this.selectedLandmark !== null) {
+                this.landmarks.splice(this.selectedLandmark, 1);
+                this.selectedLandmark = null;
             }
         },
 
         placeLandmark: function(x, y) {
-            var self = this;
-            self.selectedLandmark = self.landmarks.length;
-            self.landmarks.push({x: (x - self.offset.x) / self.scale, y: (y - self.offset.y) / self.scale, l: self.selectedLandmarkOption });
-        },
-
-        updateOffset: function(x, y) {
-            var self = this;
-            self.offset.x += x;
-            self.offset.y += y;
+            this.selectedLandmark = this.landmarks.length;
+            this.landmarks.push({x: (x - this.offset().x) / this.scale(), 
+                y: (y - this.offset().y) / this.scale(), l: this.selectedLandmarkOption });
         },
 
         render: function() {
-            var self = this;
-            for (var landmark in self.landmarks) {
-                var landmarkOption = self.getLandmarkById(self.landmarks[landmark].l);
+            for (var landmark in this.landmarks) {
+                let landmarkOption = this.getLandmarkById(this.landmarks[landmark].l);
                 
-                self.context.drawImage(landmarkOption.image.element, self.landmarks[landmark].x * self.scale + self.offset.x,
-                    self.landmarks[landmark].y * self.scale + self.offset.y, 
-                    landmarkOption.image.element.width * self.scale, landmarkOption.image.element.height * self.scale);
+                this.context.drawImage(landmarkOption.image.element, this.landmarks[landmark].x * this.scale() + this.offset().x,
+                    this.landmarks[landmark].y * this.scale() + this.offset().y, 
+                    landmarkOption.image.element.width * this.scale(), landmarkOption.image.element.height * this.scale());
             }
-            if (self.selectedLandmark !== null) {
-                var landmarkOption = self.getLandmarkById(self.landmarks[self.selectedLandmark].l);
-                self.context.lineWidth = 1;
-                self.context.strokeStyle = '#C00';
+            if (this.selectedLandmark !== null) {
+                let landmarkOption = this.getLandmarkById(this.landmarks[this.selectedLandmark].l);
+                this.context.lineWidth = 1;
+                this.context.strokeStyle = '#C00';
 
-                self.context.strokeRect(self.landmarks[self.selectedLandmark].x * self.scale + self.offset.x,
-                    self.landmarks[self.selectedLandmark].y * self.scale + self.offset.y,
+                this.context.strokeRect(this.landmarks[this.selectedLandmark].x * this.scale() + this.offset().x,
+                    this.landmarks[this.selectedLandmark].y * this.scale() + this.offset().y,
                     landmarkOption.image.element.width, landmarkOption.image.element.height);
             }
         },
         
         getPointInBoundingBox: function(x, y) {
-            var self = this;
-
-            self.selectedLandmark = null;
-            for(var landmark in self.landmarks) {
-                var landmarkOption = self.getLandmarkById(self.landmarks[landmark].l);
-                if (self.landmarks[landmark].x * self.scale + self.offset.x < x && 
-                    x < self.landmarks[landmark].x * self.scale + self.offset.x + landmarkOption.image.element.width && 
-                    y > self.landmarks[landmark].y * self.scale + self.offset.y &&
-                    self.landmarks[landmark].y * self.scale + self.offset.y + landmarkOption.image.element.height > y) {
-                        self.selectedLandmark = landmark;
+            this.selectedLandmark = null;
+            for(var landmark in this.landmarks) {
+                var landmarkOption = this.getLandmarkById(this.landmarks[landmark].l);
+                if (this.landmarks[landmark].x * this.scale() + this.offset().x < x && 
+                    x < this.landmarks[landmark].x * this.scale() + this.offset().x + landmarkOption.image.element.width && 
+                    y > this.landmarks[landmark].y * this.scale() + this.offset().y &&
+                    this.landmarks[landmark].y * this.scale() + this.offset().y + landmarkOption.image.element.height > y) {
+                    this.selectedLandmark = landmark;
                 }
             }
         },
 
         onMouseDown: function(event, callback) {
-            var self = this;
-            self.getPointInBoundingBox(event.x, event.y);
-            if (self.selectedLandmark) {
-                self.canvas.style.cursor = "move";
+            this.getPointInBoundingBox(event.x, event.y);
+            if (this.selectedLandmark) {
+                this.canvas.style.cursor = 'move';
             }
-            if (!self.selectedLandmark) {
-                self.placeLandmark(event.x, event.y);
+            if (!this.selectedLandmark) {
+                this.placeLandmark(event.x, event.y);
             }
             callback();
         },
 
         onMouseMove: function(event, callback) {
-            var self = this;
-            if (self.selectedLandmark) {
-                self.landmarks[self.selectedLandmark].x += event.movementX / self.scale;
-                self.landmarks[self.selectedLandmark].y += event.movementY / self.scale;
+            if (this.selectedLandmark) {
+                this.landmarks[this.selectedLandmark].x += event.movementX / this.scale();
+                this.landmarks[this.selectedLandmark].y += event.movementY / this.scale();
                 callback();
             }
         },
 
         onMouseUp: function(event, callback) {
-            var self = this;
-            self.canvas.style.cursor = "default";
+            this.canvas.style.cursor = 'default';
             callback();
         }
-    }
+    };
 
     function LabelController(labels, canvas, context) {
-        var self = this;
-        self.labels = labels;
-        self.canvas = canvas;
-        self.context = context;
-        self.selectedLabel = null;
-        self.scale = 1;
-        self.offset = {x: 0, y: 0};
+        this.labels = labels;
+        this.canvas = canvas;
+        this.context = context;
+        this.selectedLabel = null;
     }
 
     LabelController.prototype = {
         getLabels: function() {
-            var self = this;
-            // Remove all labels that consist of a single point
-            return self.labels.filter(label => label.v.length > 1);
+            // Remove all labels that consist of no letters
+            return this.labels.filter(label => label.v.length > 1);
         },
 
         setSelectedLabel: function(selectedLabel) {
-            var self = this;
-            self.selectedLabel = selectedLabel;
+            this.selectedLabel = selectedLabel;
             document.getElementById('labelToolbar').style.display = 'block';
-            document.getElementById('labelText').value = self.labels[self.selectedLabel].v;
+            document.getElementById('labelText').value = this.labels[this.selectedLabel].v;
             var fontSize = document.getElementById('fontSize');
-            for (var i = 0; i < fontSize.options.length; i++) {
-                if (fontSize.options[i].text == self.labels[self.selectedLabel].p) {
+            for (let i = 0; i < fontSize.options.length; i++) {
+                if (fontSize.options[i].text == this.labels[this.selectedLabel].p) {
                     fontSize.selectedIndex = i;
                     break;
                 }
             }
             var fonts = document.getElementById('fonts');
-            for (var i = 0; i < fonts.options.length; i++) {
-                if (fonts.options[i].value == self.labels[self.selectedLabel].f) {
+            for (let i = 0; i < fonts.options.length; i++) {
+                if (fonts.options[i].value == this.labels[this.selectedLabel].f) {
                     fonts.selectedIndex = i;
                     break;
                 }
             }
-            document.getElementById('colorPicker').value = self.labels[self.selectedLabel].c;
-            document.getElementById('bold').checked = self.labels[self.selectedLabel].b;
-            document.getElementById('italic').checked = self.labels[self.selectedLabel].i;
+            document.getElementById('colorPicker').value = this.labels[this.selectedLabel].c;
+            document.getElementById('bold').checked = this.labels[this.selectedLabel].b;
+            document.getElementById('italic').checked = this.labels[this.selectedLabel].i;
         },
         
         clearSelectedLabel: function() {
-            var self = this;
-            self.selectedLabel = null;
+            this.selectedLabel = null;
             document.getElementById('labelToolbar').style.display = 'none';
         },
 
-        setScale: function(scale) {
-            var self = this;
-            self.scale = scale;
+        scale: function() {
+            return sessionStorage.getItem('scale');
+        },
+
+        offset: function() {
+            return {x: +sessionStorage.getItem('xOffset'), y: +sessionStorage.getItem('yOffset')};
         },
 
         updateFontColor: function(callback, event) {
-            var self = this;
-            self.labels[self.selectedLabel].c = event.srcElement.value;
-            callback();            
+            this.labels[this.selectedLabel].c = event.srcElement.value;
+            callback();
         },
 
         updateBold: function(callback, event) {
-            var self = this;
-            self.labels[self.selectedLabel].b = event.srcElement.checked;
+            this.labels[this.selectedLabel].b = event.srcElement.checked;
             callback();
         },
 
         updateItalic: function(callback, event) {
-            var self = this;
-            self.labels[self.selectedLabel].i = event.srcElement.checked;
+            this.labels[this.selectedLabel].i = event.srcElement.checked;
             callback();
         },
 
         updateFontSize: function(callback, event) {
-            var self = this;
-            self.labels[self.selectedLabel].p = event.srcElement.selectedOptions[0].text;
+            this.labels[this.selectedLabel].p = event.srcElement.selectedOptions[0].text;
             callback();
         },
 
         updateFont: function(callback, event) {
-            var self = this;
-            self.labels[self.selectedLabel].f = event.srcElement.selectedOptions[0].value;
+            this.labels[this.selectedLabel].f = event.srcElement.selectedOptions[0].value;
             callback();
         },
 
         updateLabelText: function(callback, event) {
-            var self = this;
-            self.labels[self.selectedLabel].v = event.srcElement.value;
+            this.labels[this.selectedLabel].v = event.srcElement.value;
             callback();
         },
 
         deleteSelectedLabel: function() {
-            var self = this;
-            if (self.selectedLabel !== null) {
-                self.labels.splice(self.selectedLabel, 1);
-                self.clearSelectedLabel();    
+            if (this.selectedLabel !== null) {
+                this.labels.splice(this.selectedLabel, 1);
+                this.clearSelectedLabel();
             }
         },
 
         startLabel: function(x, y) {
-            var self = this;
-            self.labels.push({x: (x - self.offset.x) / self.scale, y: (y - self.offset.y) / self.scale, v: 'Label', f: 'Arial', p: 32, c: '#000000', b: false, i: false});
-            self.setSelectedLabel(self.labels.length - 1);
-        },
-
-        updateOffset: function(x, y) {
-            var self = this;
-            self.offset.x += x;
-            self.offset.y += y;
+            this.labels.push({x: (x - this.offset().x) / this.scale(), y: (y - this.offset().y) / this.scale(), v: 'Label', f: 'Arial', p: 32, c: '#000000', b: false, i: false});
+            this.setSelectedLabel(this.labels.length - 1);
         },
 
         render: function() {
-            var self = this;
-            for(var label in self.labels) {
-                var font = self.labels[label].b ? "bold " : "";
-                font += self.labels[label].i ? "italic " : "";
-                font += self.labels[label].p * self.scale + "pt " + self.labels[label].f;
+            for(var label in this.labels) {
+                let font = this.labels[label].b ? 'bold ' : '';
+                font += this.labels[label].i ? 'italic ' : '';
+                font += this.labels[label].p * this.scale() + 'pt ' + this.labels[label].f;
                 
-                self.context.font = font;
-                self.context.fillStyle = self.labels[label].c;
-                self.context.fillText(self.labels[label].v, self.labels[label].x * self.scale + self.offset.x, self.labels[label].y * self.scale + self.offset.y);                
+                this.context.font = font;
+                this.context.fillStyle = this.labels[label].c;
+                this.context.fillText(this.labels[label].v, this.labels[label].x * this.scale() + this.offset().x, this.labels[label].y * this.scale() + this.offset().y);
             }
 
-            if (self.selectedLabel !== null) {
-                var font = self.labels[self.selectedLabel].b ? "bold " : "";
-                font += self.labels[self.selectedLabel].i ? "italic " : "";
-                font += self.labels[self.selectedLabel].p * self.scale + "pt " + self.labels[self.selectedLabel].f;
+            if (this.selectedLabel !== null) {
+                let font = this.labels[this.selectedLabel].b ? 'bold ' : '';
+                font += this.labels[this.selectedLabel].i ? 'italic ' : '';
+                font += this.labels[this.selectedLabel].p * this.scale() + 'pt ' + this.labels[this.selectedLabel].f;
                 
-                self.context.font = font;
-                var metrics = self.context.measureText(self.labels[self.selectedLabel].v);
-                self.context.strokeStyle = '#C00';
-                self.context.lineWidth = 1;
-                self.context.strokeRect(self.labels[self.selectedLabel].x * self.scale + self.offset.x - 1,
-                    self.labels[self.selectedLabel].y * self.scale + self.offset.y - 1 - (self.labels[self.selectedLabel].p * self.scale),
-                    metrics.width + 1, self.labels[self.selectedLabel].p * self.scale + 1);
+                this.context.font = font;
+                let metrics = this.context.measureText(this.labels[this.selectedLabel].v);
+                this.context.strokeStyle = '#C00';
+                this.context.lineWidth = 1;
+                this.context.strokeRect(this.labels[this.selectedLabel].x * this.scale() + this.offset().x - 1,
+                    this.labels[this.selectedLabel].y * this.scale() + this.offset().y - 1 - (this.labels[this.selectedLabel].p * this.scale()),
+                    metrics.width + 1, this.labels[this.selectedLabel].p * this.scale() + 1);
             }
         },
 
         getPointInBoundingBox: function(x, y) {
-            var self = this;
-            self.clearSelectedLabel();
-            for(var label in self.labels) {
-                var font = self.labels[label].b ? "bold " : "";
-                font += self.labels[label].i ? "italic " : "";
-                font += self.labels[label].p * self.scale + "pt " + self.labels[label].f;
+            this.clearSelectedLabel();
+            for(var label in this.labels) {
+                var font = this.labels[label].b ? 'bold ' : '';
+                font += this.labels[label].i ? 'italic ' : '';
+                font += this.labels[label].p * this.scale() + 'pt ' + this.labels[label].f;
                 
-                self.context.font = font;
-                if (self.labels[label].x * self.scale + self.offset.x < x && 
-                    x < self.labels[label].x * self.scale + self.offset.x + self.context.measureText(self.labels[label].v).width && 
-                    self.labels[label].y * self.scale + self.offset.y - self.labels[label].p < y && 
-                    y < self.labels[label].y * self.scale + self.offset.y) {
-                        self.setSelectedLabel(label);
+                this.context.font = font;
+                if (this.labels[label].x * this.scale() + this.offset().x < x && 
+                    x < this.labels[label].x * this.scale() + this.offset().x + this.context.measureText(this.labels[label].v).width && 
+                    this.labels[label].y * this.scale() + this.offset().y - this.labels[label].p < y && 
+                    y < this.labels[label].y * this.scale() + this.offset().y) {
+                    this.setSelectedLabel(label);
                 }
             }
         },
 
         onMouseDown: function(event, callback) {
-            var self = this;
-            self.getPointInBoundingBox(event.x, event.y);
-            if (self.selectedLabel) {
-                self.canvas.style.cursor = "move";
+            this.getPointInBoundingBox(event.x, event.y);
+            if (this.selectedLabel) {
+                this.canvas.style.cursor = 'move';
             }
-            if (!self.selectedLabel) {
-                self.startLabel(event.x, event.y);
+            if (!this.selectedLabel) {
+                this.startLabel(event.x, event.y);
             }
             callback();
         },
 
         onMouseMove: function(event, callback) {
-            var self = this;
-            if (self.selectedLabel) {
-                self.labels[self.selectedLabel].x += event.movementX / self.scale;
-                self.labels[self.selectedLabel].y += event.movementY / self.scale;
+            if (this.selectedLabel) {
+                this.labels[this.selectedLabel].x += event.movementX / this.scale();
+                this.labels[this.selectedLabel].y += event.movementY / this.scale();
                 callback();
             }
         },
 
         onMouseUp: function(event, callback) {
-            var self = this;
-            self.canvas.style.cursor = "default";
+            this.canvas.style.cursor = 'default';
             callback();
         }
-    }
+    };
 
     function RoadController(roads, canvas, context) {
-        var self = this;
-        self.roads = roads;
-        self.canvas = canvas;
-        self.context = context;
-        self.selectedPoint = null;
-        self.selectedRoad = null;
-        self.scale = 1;
-        self.style = {
-            curve:	{ width: 6, color: "#333" },
-            cpline:	{ width: 1, color: "#C00" },
-            point: { radius: 10, width: 2, color: "#900", fill: "rgba(200,200,200,0.5)", arc1: 0, arc2: 2 * Math.PI }
-        }
-        self.offset = {x: 0, y: 0};
+        this.roads = roads;
+        this.canvas = canvas;
+        this.context = context;
+        this.selectedPoint = null;
+        this.selectedRoad = null;
+        this.style = {
+            curve:	{ width: 6, color: '#333' },
+            cpline:	{ width: 1, color: '#C00' },
+            point: { radius: 10, width: 2, color: '#900', fill: 'rgba(200,200,200,0.5)', arc1: 0, arc2: 2 * Math.PI }
+        };
     }
 
     RoadController.prototype = {
         getRoads: function() {
-            var self = this;
             // Remove all roads that consist of a single point
-            return self.roads.filter(road => road.length > 1);
+            return this.roads.filter(road => road.length > 1);
         },
 
-        setScale: function(scale) {
-            var self = this;
-            self.scale = scale;
+        scale: function() {
+            return sessionStorage.getItem('scale');
+        },
+
+        offset: function() {
+            return {x: +sessionStorage.getItem('xOffset'), y: +sessionStorage.getItem('yOffset')};
         },
 
         clearSelectedRoad: function() {
-            var self = this;
-            self.selectedRoad = null;
+            this.selectedRoad = null;
         },
 
         deleteSelectedRoad: function() {
-            var self = this;
-            self.roads.splice(self.selectedRoad, 1);
-            self.selectedRoad = null;
+            this.roads.splice(this.selectedRoad, 1);
+            this.selectedRoad = null;
         },
 
         startRoad: function(x, y) {
-            var self = this;
-            self.selectedRoad = self.roads.length;
-            self.roads.push([{x: (x - self.offset.x) / self.scale, y: (y - self.offset.y) / self.scale, c: false}]);
+            this.selectedRoad = this.roads.length;
+            this.roads.push([{x: (x - this.offset().x) / this.scale(), y: (y - this.offset().y) / this.scale(), c: false}]);
         },
 
         addAnchor: function(x, y) {
-            var self = this;
-            var controlPoint = self.calculateNewControlPointLocation(x, y, self.roads[self.selectedRoad].length - 1);
-            self.roads[self.selectedRoad].push({x: controlPoint.x, y: controlPoint.y, c: true});
-            self.roads[self.selectedRoad].push({x: (x - self.offset.x) / self.scale, y: (y - self.offset.y) / self.scale, c: false});
+            var controlPoint = this.calculateNewControlPointLocation(x, y, this.roads[this.selectedRoad].length - 1);
+            this.roads[this.selectedRoad].push({x: controlPoint.x, y: controlPoint.y, c: true});
+            this.roads[this.selectedRoad].push({x: (x - this.offset().x) / this.scale(), y: (y - this.offset().y) / this.scale(), c: false});
         },
 
         calculateNewControlPointLocation: function(x, y, index) {
-            var self = this;
-            var anchor = self.roads[self.selectedRoad][index];
-            var cpx = (x - self.offset.x) / self.scale + (anchor.x + (self.offset.x - x) / self.scale) / 2;
-            var cpy = (y - self.offset.y) / self.scale + (anchor.y + (self.offset.y - y) / self.scale) / 2;
+            var anchor = this.roads[this.selectedRoad][index];
+            var cpx = (x - this.offset().x) / this.scale() + (anchor.x + (this.offset().x - x) / this.scale()) / 2;
+            var cpy = (y - this.offset().y) / this.scale() + (anchor.y + (this.offset().y - y) / this.scale()) / 2;
             return {x: cpx, y: cpy};
         },
 
         isPointOnSelectedPath: function(x, y) {
-            var self = this;
-            self.drawRoad(self.roads[self.selectedRoad]);
-            return self.context.isPointInStroke(x, y);
+            this.drawRoad(this.roads[this.selectedRoad]);
+            return this.context.isPointInStroke(x, y);
         },
 
         drawRoad: function(road) {
-            var self = this;
-            self.context.lineWidth = self.style.curve.width * self.scale;
-            self.context.beginPath();
-            self.context.moveTo(road[0].x * self.scale + self.offset.x, road[0].y * self.scale + self.offset.y);
+            this.context.lineWidth = this.style.curve.width * this.scale();
+            this.context.beginPath();
+            this.context.moveTo(road[0].x * this.scale() + this.offset().x, road[0].y * this.scale() + this.offset().y);
 
             var control;
             for(var i = 1; i < road.length; i++) {
                 if (road[i].c) {
-                    control = road[i]
+                    control = road[i];
                 }
                 else {
-                    self.context.quadraticCurveTo(control.x * self.scale + self.offset.x, control.y * self.scale + self.offset.y,
-                        road[i].x * self.scale + self.offset.x, road[i].y * self.scale + self.offset.y);
+                    this.context.quadraticCurveTo(control.x * this.scale() + this.offset().x, control.y * this.scale() + this.offset().y,
+                        road[i].x * this.scale() + this.offset().x, road[i].y * this.scale() + this.offset().y);
                 }
             }
         },
 
         drawRoadSegment: function(origin, control, end) {
-            var self = this;
-            self.context.lineWidth = self.style.curve.width * self.scale;
-            self.context.beginPath();
-            self.context.moveTo(origin.x * self.scale + self.offset.x, origin.y * self.scale + self.offset.y);
-            self.context.quadraticCurveTo(control.x * self.scale + self.offset.x, control.y * self.scale + self.offset.y,
-                end.x * self.scale + self.offset.x, end.y * self.scale + self.offset.y);
+            this.context.lineWidth = this.style.curve.width * this.scale();
+            this.context.beginPath();
+            this.context.moveTo(origin.x * this.scale() + this.offset().x, origin.y * this.scale() + this.offset().y);
+            this.context.quadraticCurveTo(control.x * this.scale() + this.offset().x, control.y * this.scale() + this.offset().y,
+                end.x * this.scale() + this.offset().x, end.y * this.scale() + this.offset().y);
         },
 
         insertAnchorOnSegment: function(x, y) {
-            var self = this;
-            var road = self.roads[self.selectedRoad];
-            for(var i = 2; i < road.length; i += 2) {
-                self.drawRoadSegment(road[i - 2], road[i - 1], road[i]);
+            var road = this.roads[this.selectedRoad];
+            for(let i = 2; i < road.length; i += 2) {
+                this.drawRoadSegment(road[i - 2], road[i - 1], road[i]);
 
-                if (self.context.isPointInStroke(x, y)) {
-                    var controlPoint = self.calculateNewControlPointLocation(x, y, i - 2);
-                    self.roads[self.selectedRoad].splice(i - 1, 0, {x: controlPoint.x, y: controlPoint.y, c: true});
-                    self.roads[self.selectedRoad].splice(i, 0, {x: (x - self.offset.x) / self.scale, y: (y - self.offset.y) / self.scale, c: false});
+                if (this.context.isPointInStroke(x, y)) {
+                    var controlPoint = this.calculateNewControlPointLocation(x, y, i - 2);
+                    this.roads[this.selectedRoad].splice(i - 1, 0, {x: controlPoint.x, y: controlPoint.y, c: true});
+                    this.roads[this.selectedRoad].splice(i, 0, {x: (x - this.offset().x) / this.scale(), y: (y - this.offset().y) / this.scale(), c: false});
                     return;
                 }
             }
         },
 
         insertAnchor: function(x, y) {
-            var self = this;
-            if (self.isPointOnSelectedPath) {
-                self.insertAnchorOnSegment(x, y)
+            if (this.isPointOnSelectedPath) {
+                this.insertAnchorOnSegment(x, y);
             }
         },
 
         deleteAnchor: function() {
-            var self = this;
-            if (self.selectedPoint !== null) {
-                self.roads[self.selectedRoad].splice(Math.max(self.selectedPoint - 1, 0), 2);
-                if (self.roads[self.selectedRoad].length === 0) {
-                    self.roads.splice(self.selectedRoad, 1);
-                    self.selectedRoad = null;
+            if (this.selectedPoint !== null) {
+                this.roads[this.selectedRoad].splice(Math.max(this.selectedPoint - 1, 0), 2);
+                if (this.roads[this.selectedRoad].length === 0) {
+                    this.roads.splice(this.selectedRoad, 1);
+                    this.selectedRoad = null;
                 }
-                self.selectedPoint = null;
+                this.selectedPoint = null;
             }
-        },
-        
-        updateOffset: function(x, y) {
-            var self = this;
-            self.offset.x += x;
-            self.offset.y += y;
         },
 
         render: function() {
-            var self = this;
-            if (self.roads.length > 0) {
-                self.context.save();
-                self.context.lineCap = "round";
-                self.context.lineJoin = "round";
-                self.drawRoads();
-                self.drawControlLines();
-                self.drawInteractionPoints();
-                self.context.restore();                    
+            if (this.roads.length > 0) {
+                this.context.save();
+                this.context.lineCap = 'round';
+                this.context.lineJoin = 'round';
+                this.drawRoads();
+                this.drawControlLines();
+                this.drawInteractionPoints();
+                this.context.restore();
             }
         },
 
         drawRoads: function() {
-            var self = this;
-          	self.context.setLineDash([5 * self.scale, 15 * self.scale]);
-            self.context.strokeStyle = self.style.curve.color;
-            for (var r in self.roads) {
-                self.drawRoad(self.roads[r]);
-                self.context.stroke();    
+            this.context.setLineDash([5 * this.scale(), 15 * this.scale()]);
+            this.context.strokeStyle = this.style.curve.color;
+            for (var r in this.roads) {
+                this.drawRoad(this.roads[r]);
+                this.context.stroke();
             }
-            self.context.setLineDash([]);
+            this.context.setLineDash([]);
         },
 
         drawControlLines: function() {
-            var self = this;
-            if (self.selectedRoad !== null) {
-                self.context.lineWidth = self.style.cpline.width;
-                self.context.strokeStyle = self.style.cpline.color;
-                self.context.beginPath();
-                self.context.moveTo(self.roads[self.selectedRoad][0].x * self.scale + self.offset.x, self.roads[self.selectedRoad][0].y * self.scale + self.offset.y);
+            if (this.selectedRoad !== null) {
+                this.context.lineWidth = this.style.cpline.width;
+                this.context.strokeStyle = this.style.cpline.color;
+                this.context.beginPath();
+                this.context.moveTo(this.roads[this.selectedRoad][0].x * this.scale() + this.offset().x, this.roads[this.selectedRoad][0].y * this.scale() + this.offset().y);
     
-                for(var i = 1; i < self.roads[self.selectedRoad].length; i++) {
-                    self.context.lineTo(self.roads[self.selectedRoad][i].x * self.scale + self.offset.x, self.roads[self.selectedRoad][i].y * self.scale + self.offset.y);
+                for(var i = 1; i < this.roads[this.selectedRoad].length; i++) {
+                    this.context.lineTo(this.roads[this.selectedRoad][i].x * this.scale() + this.offset().x, this.roads[this.selectedRoad][i].y * this.scale() + this.offset().y);
                 }
     
-                self.context.stroke();    
+                this.context.stroke();
             }
         },
 
         drawInteractionPoints: function() {
-            var self = this;
-            if (self.selectedRoad !== null) {
-                self.context.lineWidth = self.style.point.width;
-                self.context.strokeStyle = self.style.point.color;
-                self.context.fillStyle = self.style.point.fill;
-                for (var p in self.roads[self.selectedRoad]) {
-                    self.context.beginPath();
-                    self.context.arc(self.roads[self.selectedRoad][p].x * self.scale + self.offset.x,
-                        self.roads[self.selectedRoad][p].y * self.scale + self.offset.y, self.style.point.radius,
-                        self.style.point.arc1, self.style.point.arc2, true);
-                    self.context.fill();
-                    self.context.stroke();
+            if (this.selectedRoad !== null) {
+                this.context.lineWidth = this.style.point.width;
+                this.context.strokeStyle = this.style.point.color;
+                this.context.fillStyle = this.style.point.fill;
+                for (var p in this.roads[this.selectedRoad]) {
+                    this.context.beginPath();
+                    this.context.arc(this.roads[this.selectedRoad][p].x * this.scale() + this.offset().x,
+                        this.roads[this.selectedRoad][p].y * this.scale() + this.offset().y, this.style.point.radius,
+                        this.style.point.arc1, this.style.point.arc2, true);
+                    this.context.fill();
+                    this.context.stroke();
                 }
             }
         },
 
         getPointInSelectedRoad: function(x, y) {
-            var self = this;
             var dx;
             var dy;
-            for (var p in self.roads[self.selectedRoad]) {
-                dx = self.roads[self.selectedRoad][p].x * self.scale + self.offset.x - x;
-                dy = self.roads[self.selectedRoad][p].y * self.scale + self.offset.y - y;
-                if ((dx * dx) + (dy * dy) < self.style.point.radius * self.style.point.radius) {
-                    self.selectedPoint = p;
+            for (var p in this.roads[this.selectedRoad]) {
+                dx = this.roads[this.selectedRoad][p].x * this.scale() + this.offset().x - x;
+                dy = this.roads[this.selectedRoad][p].y * this.scale() + this.offset().y - y;
+                if ((dx * dx) + (dy * dy) < this.style.point.radius * this.style.point.radius) {
+                    this.selectedPoint = p;
                     return;
                 }
             }
         },
 
         getRoadByPointInPath: function(x, y) {
-            var self = this;
-            for (var r in self.roads) {
-                self.context.lineWidth = self.style.curve.width;
-                self.drawRoad(self.roads[r]);
-                if (self.context.isPointInStroke(event.x, event.y)) {
+            for (var r in this.roads) {
+                this.context.lineWidth = this.style.curve.width;
+                this.drawRoad(this.roads[r]);
+                if (this.context.isPointInStroke(x, y)) {
                     return r;
                 }
             }
@@ -602,125 +531,114 @@ tg = (function() {
         },
 
         onMouseDown: function(event, callback) {
-            var self = this;
-            if (self.selectedRoad !== null) {
-                self.getPointInSelectedRoad(event.x, event.y);
-                if (self.selectedPoint) {
-                    self.canvas.style.cursor = "move";
+            if (this.selectedRoad !== null) {
+                this.getPointInSelectedRoad(event.x, event.y);
+                if (this.selectedPoint) {
+                    this.canvas.style.cursor = 'move';
                 }
             }
-            if (!self.selectedPoint) {
-                var r = self.getRoadByPointInPath(event.x, event.y);
+            if (!this.selectedPoint) {
+                var r = this.getRoadByPointInPath(event.x, event.y);
                 if (r !== null) {
-                    if (self.selectedRoad !== r) {
-                        self.selectedRoad = r;
+                    if (this.selectedRoad !== r) {
+                        this.selectedRoad = r;
                     }
                     else {
-                        self.clearSelectedRoad()
+                        this.clearSelectedRoad();
                     }
                 }
-                else if (self.selectedRoad !== null) {
-                    self.addAnchor(event.x, event.y);
+                else if (this.selectedRoad !== null) {
+                    this.addAnchor(event.x, event.y);
                 }
                 else {
-                    self.startRoad(event.x, event.y);
+                    this.startRoad(event.x, event.y);
                 }
             }
             callback();
         },
 
         onMouseMove: function(event, callback) {
-            var self = this;
-            if (self.selectedPoint) {
-                self.roads[self.selectedRoad][self.selectedPoint].x += event.movementX / self.scale;
-                self.roads[self.selectedRoad][self.selectedPoint].y += event.movementY / self.scale;
+            if (this.selectedPoint) {
+                this.roads[this.selectedRoad][this.selectedPoint].x += event.movementX / this.scale();
+                this.roads[this.selectedRoad][this.selectedPoint].y += event.movementY / this.scale();
                 callback();
             }
         },
 
         onMouseUp: function(event, callback) {
-            var self = this;
-            self.selectedPoint = null;
-            self.canvas.style.cursor = "default";
+            this.selectedPoint = null;
+            this.canvas.style.cursor = 'default';
             callback();
         },
 
         onRightClick: function(event, callback) {
-            var self = this;
-            self.getPointInSelectedRoad(event.x, event.y);
-            if (self.selectedPoint !== null) {
-                self.deleteAnchor();
+            this.getPointInSelectedRoad(event.x, event.y);
+            if (this.selectedPoint !== null) {
+                this.deleteAnchor();
             } else {
-                self.insertAnchor(event.x, event.y);
+                this.insertAnchor(event.x, event.y);
             }
             callback();
         }
-    }
+    };
     
     function RiverController(rivers, canvas, context) {
-        var self = this;
-        self.rivers = rivers;
-        self.canvas = canvas;
-        self.context = context;
-        self.selectedPoint = null;
-        self.selectedRiver = null;
-        self.scale = 1;
-        self.style = {
-            curve:	{ width: 6, color: "#688aa3" },
-            cpline:	{ width: 1, color: "#C00" },
-            point: { radius: 10, width: 2, color: "#900", fill: "rgba(200,200,200,0.5)", arc1: 0, arc2: 2 * Math.PI }
-        }
-        self.offset = {x: 0, y: 0};
+        this.rivers = rivers;
+        this.canvas = canvas;
+        this.context = context;
+        this.selectedPoint = null;
+        this.selectedRiver = null;
+        this.style = {
+            curve:	{ width: 6, color: '#688aa3' },
+            cpline:	{ width: 1, color: '#C00' },
+            point: { radius: 10, width: 2, color: '#900', fill: 'rgba(200,200,200,0.5)', arc1: 0, arc2: 2 * Math.PI }
+        };
     }
 
     RiverController.prototype = {
         getRivers: function() {
-            var self = this;
             // Remove all rivers that consist of a single point
-            return self.rivers.filter(river => river.length > 1);
+            return this.rivers.filter(river => river.length > 1);
         },
 
-        setScale: function(scale) {
-            var self = this;
-            self.scale = scale;
+        scale: function() {
+            return sessionStorage.getItem('scale');
+        },
+
+        offset: function() {
+            return {x: +sessionStorage.getItem('xOffset'), y: +sessionStorage.getItem('yOffset')};
         },
 
         clearSelectedRiver: function() {
-            var self = this;
-            self.selectedRiver = null;
+            this.selectedRiver = null;
         },
 
         deleteSelectedRiver: function() {
-            var self = this;
-            self.rivers.splice(self.selectedRiver, 1);
-            self.selectedRiver = null;
+            this.rivers.splice(this.selectedRiver, 1);
+            this.selectedRiver = null;
         },
 
         startRiver: function(x, y) {
-            var self = this;
-            self.selectedRiver = self.rivers.length;
-            self.rivers.push([{x: (x - self.offset.x) / self.scale, y: (y - self.offset.y) / self.scale, c: false}]);
+            this.selectedRiver = this.rivers.length;
+            this.rivers.push([{x: (x - this.offset().x) / this.scale(), y: (y - this.offset().y) / this.scale(), c: false}]);
         },
 
         addAnchor: function(x, y) {
-            var self = this;
-            var anchor = self.rivers[self.selectedRiver][self.rivers[self.selectedRiver].length - 1];
-            self.rivers[self.selectedRiver].push({x: (anchor.x) + 50, y: (anchor.y) + 50, c: true});
-            self.rivers[self.selectedRiver].push({x: (x - self.offset.x) / self.scale - 50, y: (y - self.offset.y) / self.scale - 50, c: true});
-            self.rivers[self.selectedRiver].push({x: (x - self.offset.x) / self.scale, y: (y - self.offset.y) / self.scale, c: false});
+            var anchor = this.rivers[this.selectedRiver][this.rivers[this.selectedRiver].length - 1];
+            this.rivers[this.selectedRiver].push({x: (anchor.x) + 50, y: (anchor.y) + 50, c: true});
+            this.rivers[this.selectedRiver].push({x: (x - this.offset().x) / this.scale() - 50, y: (y - this.offset().y) / this.scale() - 50, c: true});
+            this.rivers[this.selectedRiver].push({x: (x - this.offset().x) / this.scale(), y: (y - this.offset().y) / this.scale(), c: false});
         },
 
         isPointOnSelectedPath: function(x, y) {
-            var self = this;
-            self.drawRiver(self.rivers[self.selectedRiver]);
-            return self.context.isPointInStroke(x, y);
+            this.drawRiver(this.rivers[this.selectedRiver]);
+            return this.context.isPointInStroke(x, y);
         },
 
         drawRiver: function(river) {
-            var self = this;
-            self.context.lineWidth = self.style.curve.width * self.scale;
-            self.context.beginPath();
-            self.context.moveTo(river[0].x * self.scale + self.offset.x, river[0].y * self.scale + self.offset.y);
+            this.context.lineWidth = this.style.curve.width * this.scale();
+            this.context.beginPath();
+            this.context.moveTo(river[0].x * this.scale() + this.offset().x, river[0].y * this.scale() + this.offset().y);
 
             var controls = [];
             for(var i = 1; i < river.length; i++) {
@@ -728,143 +646,127 @@ tg = (function() {
                     controls.push(river[i]);
                 }
                 else {
-                    self.context.bezierCurveTo(controls[0].x * self.scale + self.offset.x, controls[0].y * self.scale + self.offset.y,
-                        controls[1].x * self.scale + self.offset.x, controls[1].y * self.scale + self.offset.y,
-                        river[i].x * self.scale + self.offset.x, river[i].y * self.scale + self.offset.y);
+                    this.context.bezierCurveTo(controls[0].x * this.scale() + this.offset().x, controls[0].y * this.scale() + this.offset().y,
+                        controls[1].x * this.scale() + this.offset().x, controls[1].y * this.scale() + this.offset().y,
+                        river[i].x * this.scale() + this.offset().x, river[i].y * this.scale() + this.offset().y);
                     controls = [];
                 }
             }
         },
 
         drawRiverSegment: function(origin, control1, control2, end) {
-            var self = this;
-            self.context.lineWidth = self.style.curve.width * self.scale;
-            self.context.beginPath();
-            self.context.moveTo(origin.x * self.scale + self.offset.x, origin.y * self.scale + self.offset.y);
-            self.context.bezierCurveTo(control1.x * self.scale + self.offset.x, control1.y * self.scale + self.offset.y,
-                control2.x * self.scale + self.offset.x, control2.y * self.scale + self.offset.y,
-                end.x * self.scale + self.offset.x, end.y * self.scale + self.offset.y);
+            this.context.lineWidth = this.style.curve.width * this.scale();
+            this.context.beginPath();
+            this.context.moveTo(origin.x * this.scale() + this.offset().x, origin.y * this.scale() + this.offset().y);
+            this.context.bezierCurveTo(control1.x * this.scale() + this.offset().x, control1.y * this.scale() + this.offset().y,
+                control2.x * this.scale() + this.offset().x, control2.y * this.scale() + this.offset().y,
+                end.x * this.scale() + this.offset().x, end.y * this.scale() + this.offset().y);
         },
 
         insertAnchorOnSegment: function(x, y) {
-            var self = this;
-            var river = self.rivers[self.selectedRiver];
+            var river = this.rivers[this.selectedRiver];
             for(var i = 3; i < river.length; i += 3) {
-                self.drawRiverSegment(river[i - 3], river[i - 2], river[i - 1], river[i]);
+                this.drawRiverSegment(river[i - 3], river[i - 2], river[i - 1], river[i]);
 
-                if (self.context.isPointInStroke(x, y)) {
-                    self.rivers[self.selectedRiver].splice(i - 1, 0, {x: (x - self.offset.x) / self.scale + 50, y: (y - self.offset.y) / self.scale + 50, c: true});
-                    self.rivers[self.selectedRiver].splice(i, 0, {x: (x - self.offset.x) / self.scale, y: (y - self.offset.y) / self.scale, c: false});
-                    self.rivers[self.selectedRiver].splice(i + 1, 0, {x: (x - self.offset.x) / self.scale - 50, y: (y - self.offset.y) / self.scale - 50, c: true});
+                if (this.context.isPointInStroke(x, y)) {
+                    this.rivers[this.selectedRiver].splice(i - 1, 0, {x: (x - this.offset().x) / this.scale() + 50, y: (y - this.offset().y) / this.scale() + 50, c: true});
+                    this.rivers[this.selectedRiver].splice(i, 0, {x: (x - this.offset().x) / this.scale(), y: (y - this.offset().y) / this.scale(), c: false});
+                    this.rivers[this.selectedRiver].splice(i + 1, 0, {x: (x - this.offset().x) / this.scale() - 50, y: (y - this.offset().y) / this.scale() - 50, c: true});
                     return;
                 }
             }
         },
 
         insertAnchor: function(x, y) {
-            var self = this;
-            if (self.isPointOnSelectedPath) {
-                self.insertAnchorOnSegment(x, y)
+            if (this.isPointOnSelectedPath) {
+                this.insertAnchorOnSegment(x, y);
             }
         },
 
         deleteAnchor: function() {
-            var self = this;
-            if (self.selectedPoint !== null) {
-                self.rivers[self.selectedRiver].splice(Math.max(self.selectedPoint - 1, 0), 3);
-                if (self.rivers[self.selectedRiver].length === 0) {
-                    self.rivers.splice(self.selectedRiver, 1);
-                    self.selectedRiver = null;
+            if (this.selectedPoint !== null) {
+                this.rivers[this.selectedRiver].splice(Math.max(this.selectedPoint - 1, 0), 3);
+                if (this.rivers[this.selectedRiver].length === 0) {
+                    this.rivers.splice(this.selectedRiver, 1);
+                    this.selectedRiver = null;
                 }
-                self.selectedPoint = null;
+                this.selectedPoint = null;
             }
-        },
-        
-        updateOffset: function(x, y) {
-            var self = this;
-            self.offset.x += x;
-            self.offset.y += y;
         },
 
         render: function() {
-            var self = this;
-            if (self.rivers.length > 0) {
-                self.context.save();
-                self.context.lineCap = "round";
-                self.context.lineJoin = "round";
-                self.drawRivers();
-                self.drawControlLines();
-                self.drawInteractionPoints();
-                self.context.restore();                    
+            if (this.rivers.length > 0) {
+                this.context.save();
+                this.context.lineCap = 'round';
+                this.context.lineJoin = 'round';
+                this.drawRivers();
+                this.drawControlLines();
+                this.drawInteractionPoints();
+                this.context.restore();
             }
         },
 
         drawRivers: function() {
-            var self = this;
-            self.context.strokeStyle = self.style.curve.color;
-            for (var r in self.rivers) {
-                self.drawRiver(self.rivers[r]);
-                self.context.stroke();    
+            this.context.strokeStyle = this.style.curve.color;
+            for (var r in this.rivers) {
+                this.drawRiver(this.rivers[r]);
+                this.context.stroke();
             }
-            self.context.setLineDash([]);
+            this.context.setLineDash([]);
         },
 
         drawControlLines: function() {
-            var self = this;
-            if (self.selectedRiver !== null) {
-                self.context.lineWidth = self.style.cpline.width;
-                self.context.strokeStyle = self.style.cpline.color;
+            if (this.selectedRiver !== null) {
+                this.context.lineWidth = this.style.cpline.width;
+                this.context.strokeStyle = this.style.cpline.color;
     
-                for(var i = 3; i < self.rivers[self.selectedRiver].length; i += 3) {
-                    self.context.beginPath();
-                    self.context.moveTo(self.rivers[self.selectedRiver][i - 3].x * self.scale + self.offset.x, self.rivers[self.selectedRiver][i - 3].y * self.scale + self.offset.y);
-                    self.context.lineTo(self.rivers[self.selectedRiver][i - 2].x * self.scale + self.offset.x, self.rivers[self.selectedRiver][i - 2].y * self.scale + self.offset.y);
-                    self.context.stroke();
-                    self.context.beginPath();
-                    self.context.moveTo(self.rivers[self.selectedRiver][i - 1].x * self.scale + self.offset.x, self.rivers[self.selectedRiver][i - 1].y * self.scale + self.offset.y);
-                    self.context.lineTo(self.rivers[self.selectedRiver][i].x * self.scale + self.offset.x, self.rivers[self.selectedRiver][i].y * self.scale + self.offset.y);
-                    self.context.stroke();
+                for(var i = 3; i < this.rivers[this.selectedRiver].length; i += 3) {
+                    this.context.beginPath();
+                    this.context.moveTo(this.rivers[this.selectedRiver][i - 3].x * this.scale() + this.offset().x, this.rivers[this.selectedRiver][i - 3].y * this.scale() + this.offset().y);
+                    this.context.lineTo(this.rivers[this.selectedRiver][i - 2].x * this.scale() + this.offset().x, this.rivers[this.selectedRiver][i - 2].y * this.scale() + this.offset().y);
+                    this.context.stroke();
+                    this.context.beginPath();
+                    this.context.moveTo(this.rivers[this.selectedRiver][i - 1].x * this.scale() + this.offset().x, this.rivers[this.selectedRiver][i - 1].y * this.scale() + this.offset().y);
+                    this.context.lineTo(this.rivers[this.selectedRiver][i].x * this.scale() + this.offset().x, this.rivers[this.selectedRiver][i].y * this.scale() + this.offset().y);
+                    this.context.stroke();
                 }    
             }
         },
 
         drawInteractionPoints: function() {
-            var self = this;
-            if (self.selectedRiver !== null) {
-                self.context.lineWidth = self.style.point.width;
-                self.context.strokeStyle = self.style.point.color;
-                self.context.fillStyle = self.style.point.fill;
-                for (var p in self.rivers[self.selectedRiver]) {
-                    self.context.beginPath();
-                    self.context.arc(self.rivers[self.selectedRiver][p].x * self.scale + self.offset.x,
-                        self.rivers[self.selectedRiver][p].y * self.scale + self.offset.y, self.style.point.radius,
-                        self.style.point.arc1, self.style.point.arc2, true);
-                    self.context.fill();
-                    self.context.stroke();
+            if (this.selectedRiver !== null) {
+                this.context.lineWidth = this.style.point.width;
+                this.context.strokeStyle = this.style.point.color;
+                this.context.fillStyle = this.style.point.fill;
+                for (var p in this.rivers[this.selectedRiver]) {
+                    this.context.beginPath();
+                    this.context.arc(this.rivers[this.selectedRiver][p].x * this.scale() + this.offset().x,
+                        this.rivers[this.selectedRiver][p].y * this.scale() + this.offset().y, this.style.point.radius,
+                        this.style.point.arc1, this.style.point.arc2, true);
+                    this.context.fill();
+                    this.context.stroke();
                 }
             }
         },
 
         getPointInSelectedRiver: function(x, y) {
-            var self = this;
             var dx;
             var dy;
-            for (var p in self.rivers[self.selectedRiver]) {
-                dx = self.rivers[self.selectedRiver][p].x * self.scale + self.offset.x - x;
-                dy = self.rivers[self.selectedRiver][p].y * self.scale + self.offset.y - y;
-                if ((dx * dx) + (dy * dy) < self.style.point.radius * self.style.point.radius) {
-                    self.selectedPoint = p;
+            for (var p in this.rivers[this.selectedRiver]) {
+                dx = this.rivers[this.selectedRiver][p].x * this.scale() + this.offset().x - x;
+                dy = this.rivers[this.selectedRiver][p].y * this.scale() + this.offset().y - y;
+                if ((dx * dx) + (dy * dy) < this.style.point.radius * this.style.point.radius) {
+                    this.selectedPoint = p;
                     return;
                 }
             }
         },
 
         getRiverByPointInPath: function(x, y) {
-            var self = this;
-            for (var r in self.rivers) {
-                self.context.lineWidth = self.style.curve.width;
-                self.drawRiver(self.rivers[r]);
-                if (self.context.isPointInStroke(event.x, event.y)) {
+            for (var r in this.rivers) {
+                this.context.lineWidth = this.style.curve.width;
+                this.drawRiver(this.rivers[r]);
+                if (this.context.isPointInStroke(x, y)) {
                     return r;
                 }
             }
@@ -872,113 +774,104 @@ tg = (function() {
         },
 
         onMouseDown: function(event, callback) {
-            var self = this;
-            if (self.selectedRiver !== null) {
-                self.getPointInSelectedRiver(event.x, event.y);
-                if (self.selectedPoint) {
-                    self.canvas.style.cursor = "move";
+            if (this.selectedRiver !== null) {
+                this.getPointInSelectedRiver(event.x, event.y);
+                if (this.selectedPoint) {
+                    this.canvas.style.cursor = 'move';
                 }
             }
-            if (!self.selectedPoint) {
-                var r = self.getRiverByPointInPath(event.x, event.y);
+            if (!this.selectedPoint) {
+                var r = this.getRiverByPointInPath(event.x, event.y);
                 if (r !== null) {
-                    if (self.selectedRiver !== r) {
-                        self.selectedRiver = r;
+                    if (this.selectedRiver !== r) {
+                        this.selectedRiver = r;
                     }
                     else {
-                        self.clearSelectedRiver()
+                        this.clearSelectedRiver();
                     }
                 }
-                else if (self.selectedRiver !== null) {
-                    self.addAnchor(event.x, event.y);
+                else if (this.selectedRiver !== null) {
+                    this.addAnchor(event.x, event.y);
                 }
                 else {
-                    self.startRiver(event.x, event.y);
+                    this.startRiver(event.x, event.y);
                 }
             }
             callback();
         },
 
         onMouseMove: function(event, callback) {
-            var self = this;
-            if (self.selectedPoint) {
-                self.rivers[self.selectedRiver][self.selectedPoint].x += event.movementX / self.scale;
-                self.rivers[self.selectedRiver][self.selectedPoint].y += event.movementY / self.scale;
-                if (!self.rivers[self.selectedRiver][self.selectedPoint].c) {
-                    if (self.selectedPoint - 1 > 0) {
-                        self.rivers[self.selectedRiver][+self.selectedPoint - 1].x += event.movementX / self.scale;
-                        self.rivers[self.selectedRiver][+self.selectedPoint - 1].y += event.movementY / self.scale;    
+            if (this.selectedPoint) {
+                this.rivers[this.selectedRiver][this.selectedPoint].x += event.movementX / this.scale();
+                this.rivers[this.selectedRiver][this.selectedPoint].y += event.movementY / this.scale();
+                if (!this.rivers[this.selectedRiver][this.selectedPoint].c) {
+                    if (this.selectedPoint - 1 > 0) {
+                        this.rivers[this.selectedRiver][+this.selectedPoint - 1].x += event.movementX / this.scale();
+                        this.rivers[this.selectedRiver][+this.selectedPoint - 1].y += event.movementY / this.scale();
                     }
-                    if (+self.selectedPoint + 1 < self.rivers[self.selectedRiver].length) {
-                        self.rivers[self.selectedRiver][+self.selectedPoint + 1].x += event.movementX / self.scale;
-                        self.rivers[self.selectedRiver][+self.selectedPoint + 1].y += event.movementY / self.scale;   
-                    }        
+                    if (+this.selectedPoint + 1 < this.rivers[this.selectedRiver].length) {
+                        this.rivers[this.selectedRiver][+this.selectedPoint + 1].x += event.movementX / this.scale();
+                        this.rivers[this.selectedRiver][+this.selectedPoint + 1].y += event.movementY / this.scale();
+                    }
                 }
                 callback();
             }
         },
 
         onMouseUp: function(event, callback) {
-            var self = this;
-            self.selectedPoint = null;
-            self.canvas.style.cursor = "default";
+            this.selectedPoint = null;
+            this.canvas.style.cursor = 'default';
             callback();
         },
 
         onRightClick: function(event, callback) {
-            var self = this;
-            self.getPointInSelectedRiver(event.x, event.y);
-            if (self.selectedPoint !== null) {
-                self.deleteAnchor();
+            this.getPointInSelectedRiver(event.x, event.y);
+            if (this.selectedPoint !== null) {
+                this.deleteAnchor();
             } else {
-                self.insertAnchor(event.x, event.y);
+                this.insertAnchor(event.x, event.y);
             }
             callback();
         }
-    }
+    };
 
     function TerrainController(tiles, canvas, context) {
-        var self = this;
-        self.tiles = tiles;
-        self.canvas = canvas;
-        self.context = context;
-        self.scale = 1;
-        self.tileWidth = 300;
-        self.tileHeight = 150;
-        self.points = [{x: 0, y: .5}, {x: .25, y: 0}, {x: .75, y: 0}, {x: 1, y: .5}, {x: .75, y: 1}, {x: .25, y: 1}];
-        self.terrain;
-        self.selectedTerrain = 1;
-        self.offset = {x: 0, y: 0};
-        self.m_canvas = document.createElement('canvas');
-        self.m_canvas.width = self.tileWidth;
-        self.m_canvas.height = self.tileHeight;
-        self.m_context = self.m_canvas.getContext('2d');
-        self.m2_canvas = document.createElement('canvas');
-        self.m2_canvas.width = self.tileWidth;
-        self.m2_canvas.height = self.tileHeight;
-        self.m2_context = self.m2_canvas.getContext('2d');
+        this.tiles = tiles;
+        this.canvas = canvas;
+        this.context = context;
+        this.tileWidth = 300;
+        this.tileHeight = 150;
+        this.points = [{x: 0, y: .5}, {x: .25, y: 0}, {x: .75, y: 0}, {x: 1, y: .5}, {x: .75, y: 1}, {x: .25, y: 1}];
+        this.terrain;
+        this.selectedTerrain = 1;
+        this.m_canvas = document.createElement('canvas');
+        this.m_canvas.width = this.tileWidth;
+        this.m_canvas.height = this.tileHeight;
+        this.m_context = this.m_canvas.getContext('2d');
+        this.m2_canvas = document.createElement('canvas');
+        this.m2_canvas.width = this.tileWidth;
+        this.m2_canvas.height = this.tileHeight;
+        this.m2_context = this.m2_canvas.getContext('2d');
 
-        self.initialize();
+        this.initialize();
     }
 
     TerrainController.prototype = {
         initialize: function() {
-            var self = this;
-            if (!self.terrain || !self.terrain.length) {
-                self.terrain = [
+            if (!this.terrain || !this.terrain.length) {
+                this.terrain = [
                     new Terrain(0, 'Blank', '/images/terrain/blank/', 500, 0),
                     new Terrain(1, 'Ocean', '/images/terrain/ocean/', 0, 0),
                     new Terrain(10, 'Grass', '/images/terrain/grass/', 500, 0),
                     new Terrain(11, 'Forest', '/images/terrain/forest/', 500, 2),
                     new Terrain(12, 'Hills', '/images/terrain/hills/', 500, 0)
-                ]
+                ];
             }
         },
 
         terrainLoaded: function() {
-            var self = this;
             var loaded = true;
-            self.terrain.forEach(terrain => {
+            this.terrain.forEach(terrain => {
                 if (!terrain.loaded()) {
                     loaded = false;
                     return;
@@ -988,20 +881,17 @@ tg = (function() {
         },
 
         getTileHeight: function() {
-            var self = this;
-            return self.tileHeight * self.scale;
+            return this.tileHeight * this.scale();
         },
 
         getTileWidth: function() {
-            var self = this;
-            return self.tileWidth * self.scale;
+            return this.tileWidth * this.scale();
         },
 
         getMappedTerrainArea: function() {
-            var self = this;
             var xMin, xMax, yMin, yMinEven, yMax, yMaxEven;
 
-            self.tiles.forEach(function(tile) {
+            this.tiles.forEach(function(tile) {
                 if (xMin == null || xMin > tile.x) {
                     xMin = tile.x;
                 }
@@ -1017,103 +907,91 @@ tg = (function() {
                     yMax = tile.y;
                 }
             });
-            var width = Math.abs(xMin - xMax) * (.75 * self.getTileWidth()) + self.getTileWidth();
-            var height = Math.abs(yMin - yMax) * self.getTileHeight() + self.getTileHeight();
-            height -= yMinEven && !yMaxEven ? self.getTileHeight() / 2 : 0;
+            var width = Math.abs(xMin - xMax) * (.75 * this.getTileWidth()) + this.getTileWidth();
+            var height = Math.abs(yMin - yMax) * this.getTileHeight() + this.getTileHeight();
+            height -= yMinEven && !yMaxEven ? this.getTileHeight() / 2 : 0;
             
-            var xOffset = -xMin * (.75 * self.getTileWidth()) + self.getTileWidth() / 2;
-            var yOffset = -yMin * self.getTileHeight() + self.getTileHeight() / 2;
-            yOffset -= yMinEven ? self.getTileHeight() / 2 : 0;
+            var xOffset = -xMin * (.75 * this.getTileWidth()) + this.getTileWidth() / 2;
+            var yOffset = -yMin * this.getTileHeight() + this.getTileHeight() / 2;
+            yOffset -= yMinEven ? this.getTileHeight() / 2 : 0;
             
             return { width: width,
-                     height: height,
-                     offset: { x: xOffset, y: yOffset } }
+                height: height,
+                offset: { x: xOffset, y: yOffset } };
         },
 
         getTiles: function() {
-            var self = this;
-            return self.tiles.filter(tile => tile.t != 0);
+            return this.tiles.filter(tile => tile.t != 0);
         },
 
-        setScale: function(scale) {
-            var self = this;
-            self.scale = scale;
+        scale: function() {
+            return sessionStorage.getItem('scale');
         },
 
-        updateOffset: function(x, y) {
-            var self = this;
-            self.offset.x += x;
-            self.offset.y += y;
+        offset: function() {
+            return {x: +sessionStorage.getItem('xOffset'), y: +sessionStorage.getItem('yOffset')};
         },
-        
+
         getTerrainById: function(id) {
-            var self = this;
-            return self.terrain.find(item => item.id == id);
+            return this.terrain.find(item => item.id == id);
         },
 
         getRandomTerrainFeatureById: function(id) {
-            var self = this;
-            return self.terrain.find(item => item.id == id).images.length - 1;
+            return this.terrain.find(item => item.id == id).images.length - 1;
         },
 
         setSelectedTerrainId: function(id) {
-            var self = this;
-            self.selectedTerrain = id;
+            this.selectedTerrain = id;
         },
 
         getSelectedTerrainId: function() {
-            var self = this;
-            return self.selectedTerrain;
+            return this.selectedTerrain;
         },
 
         getBounds: function() {
-            var self = this;
-            let tileOffset = self.getTileOffset();
-            let totalTiles = self.getTotalTiles();
+            let tileOffset = this.getTileOffset();
+            let totalTiles = this.getTotalTiles();
             return { xMin: 0 - tileOffset.x,
-                     xMax: totalTiles.x - tileOffset.x,
-                     yMin: 0 - tileOffset.y,
-                     yMax: totalTiles.y - tileOffset.y };
+                xMax: totalTiles.x - tileOffset.x,
+                yMin: 0 - tileOffset.y,
+                yMax: totalTiles.y - tileOffset.y };
         },
 
         getRandomTerrainFeature: function() {
-            var self = this;
-            if (self.getTerrainById(self.getSelectedTerrainId()).images.length == 1) {
+            if (this.getTerrainById(this.getSelectedTerrainId()).images.length == 1) {
                 return null;
             }
-            var features = self.getTerrainById(self.getSelectedTerrainId()).images.length - 2;
+            var features = this.getTerrainById(this.getSelectedTerrainId()).images.length - 2;
             var number = Math.round(features * Math.random()) + 1;
             return number;
         },
 
         changeTerrainTile: function(event, callback) {
-            var self = this;
-            var tileIndex = self.getTileIndex(event.offsetX, event.offsetY);
+            var tileIndex = this.getTileIndex(event.offsetX, event.offsetY);
             if (tileIndex !== undefined) {
-                var index = self.tiles.findIndex(tile => tile.x == tileIndex.x && tile.y == tileIndex.y);
+                var index = this.tiles.findIndex(tile => tile.x == tileIndex.x && tile.y == tileIndex.y);
                 if (index > -1) {
-                    if (event.type != "mousemove" || self.tiles[index].t !== self.getSelectedTerrainId()) {
-                        self.tiles[index].t = self.getSelectedTerrainId();
-                        self.tiles[index].f = self.getRandomTerrainFeature();    
+                    if (event.type != 'mousemove' || this.tiles[index].t !== this.getSelectedTerrainId()) {
+                        this.tiles[index].t = this.getSelectedTerrainId();
+                        this.tiles[index].f = this.getRandomTerrainFeature();
                     }
                 } else {
-                    self.tiles.push({x: tileIndex.x, y: tileIndex.y, t: self.getSelectedTerrainId(), f: self.getRandomTerrainFeature()})
+                    this.tiles.push({x: tileIndex.x, y: tileIndex.y, t: this.getSelectedTerrainId(), f: this.getRandomTerrainFeature()});
                 }    
             }
             callback();
         },
 
         getTileIndex: function(x, y) {
-            var self = this;
-            var bounds = self.getBounds();
+            var bounds = this.getBounds();
             for (var xIndex = bounds.xMin; xIndex < bounds.xMax; xIndex++) {
-                var xCartesian = self.getCartesianX(xIndex);
-                if (xCartesian < x && xCartesian + self.getTileWidth() > x) {
+                var xCartesian = this.getCartesianX(xIndex);
+                if (xCartesian < x && xCartesian + this.getTileWidth() > x) {
                     for (var yIndex = bounds.yMin; yIndex < bounds.yMax; yIndex++) {
                         var isEvenRow = Math.abs(xIndex) % 2 == 1; // yes, if it's equal to 1, the first row is index 0, not index 1
-                         var yCartesian = self.getCartesianY(yIndex, isEvenRow);
-                        if (yCartesian < y && yCartesian + self.getTileHeight() > y) {
-                            if (self.pointIntersects(xCartesian, yCartesian)) {
+                        var yCartesian = this.getCartesianY(yIndex, isEvenRow);
+                        if (yCartesian < y && yCartesian + this.getTileHeight() > y) {
+                            if (this.pointIntersects(xCartesian, yCartesian)) {
                                 return {x: xIndex, y: yIndex};
                             }
                         }
@@ -1123,19 +1001,18 @@ tg = (function() {
         },
 
         pointIntersects: function(xCartesian, yCartesian) {
-            var self = this;
-            self.context.save();
-            self.context.beginPath();
-            for(var i = 0; i < self.points.length; i++) {
+            this.context.save();
+            this.context.beginPath();
+            for(var i = 0; i < this.points.length; i++) {
                 if (i == 0) {
-                    self.context.moveTo(xCartesian + self.points[i].x * self.getTileWidth(), yCartesian + self.points[i].y * self.getTileHeight());
+                    this.context.moveTo(xCartesian + this.points[i].x * this.getTileWidth(), yCartesian + this.points[i].y * this.getTileHeight());
                 }
                 else {
-                    self.context.lineTo(xCartesian + self.points[i].x * self.getTileWidth(), yCartesian + self.points[i].y * self.getTileHeight());
+                    this.context.lineTo(xCartesian + this.points[i].x * this.getTileWidth(), yCartesian + this.points[i].y * this.getTileHeight());
                 }
             }
 
-            if (self.context.isPointInPath(event.offsetX, event.offsetY)) {
+            if (this.context.isPointInPath(event.offsetX, event.offsetY)) {
                 return true;
             } else {
                 return false;
@@ -1143,229 +1020,214 @@ tg = (function() {
         },
 
         getTotalTiles: function() {
-            var self = this;
-            return { x: Math.ceil(self.canvas.width / (.75 * self.getTileWidth())) + 2, y : Math.ceil(self.canvas.height / self.getTileHeight()) + 2 };
+            return { x: Math.ceil(this.canvas.width / (.75 * this.getTileWidth())) + 2, y : Math.ceil(this.canvas.height / this.getTileHeight()) + 2 };
         },
 
         getTileOffset: function() {
-            var self = this;
-            return { x: Math.ceil(self.offset.x / (.75 * self.getTileWidth())), y: Math.ceil(self.offset.y / self.getTileHeight()) };
+            return { x: Math.ceil(this.offset().x / (.75 * this.getTileWidth())), y: Math.ceil(this.offset().y / this.getTileHeight()) };
         },
         
         drawOverlay: function(xIndex, yIndex, zIndex, x, y, i) {
-            var self = this;
-            var tile = self.tiles.filter(tile => tile.x == x && tile.y == y);
+            var tile = this.tiles.filter(tile => tile.x == x && tile.y == y);
             if (tile.length > 0) {
-                var terrain = self.getTerrainById(tile[0].t);
+                var terrain = this.getTerrainById(tile[0].t);
                 if (terrain.baseZIndex > zIndex) {
-                    self.m2_context.drawImage(terrain.overlay[i].element, 0, 0);
+                    this.m2_context.drawImage(terrain.overlay[i].element, 0, 0);
                 }
             }
         },
 
         drawOverlays: function(xIndex, yIndex, zIndex) {
-            var self = this;
             var isEvenRow = Math.abs(xIndex) % 2 == 1; // yes, if it's equal to 1, the first row is index 0, not index 1
-            self.drawOverlay(xIndex, yIndex, zIndex, xIndex, yIndex - 1, 0);
-            self.drawOverlay(xIndex, yIndex, zIndex, xIndex - 1, isEvenRow ? yIndex : yIndex - 1 , 1);
-            self.drawOverlay(xIndex, yIndex, zIndex, xIndex + 1, isEvenRow ? yIndex : yIndex - 1, 2);
-            self.drawOverlay(xIndex, yIndex, zIndex, xIndex - 1, isEvenRow ? yIndex + 1 : yIndex, 3);
-            self.drawOverlay(xIndex, yIndex, zIndex, xIndex + 1, isEvenRow ? yIndex + 1 : yIndex, 4);
-            self.drawOverlay(xIndex, yIndex, zIndex, xIndex, yIndex + 1, 5);
+            this.drawOverlay(xIndex, yIndex, zIndex, xIndex, yIndex - 1, 0);
+            this.drawOverlay(xIndex, yIndex, zIndex, xIndex - 1, isEvenRow ? yIndex : yIndex - 1 , 1);
+            this.drawOverlay(xIndex, yIndex, zIndex, xIndex + 1, isEvenRow ? yIndex : yIndex - 1, 2);
+            this.drawOverlay(xIndex, yIndex, zIndex, xIndex - 1, isEvenRow ? yIndex + 1 : yIndex, 3);
+            this.drawOverlay(xIndex, yIndex, zIndex, xIndex + 1, isEvenRow ? yIndex + 1 : yIndex, 4);
+            this.drawOverlay(xIndex, yIndex, zIndex, xIndex, yIndex + 1, 5);
         },
 
         drawShore: function(xIndex, yIndex, zIndex, x, y, i) {
-            var self = this;
-            var tile = self.tiles.filter(tile => tile.x == x && tile.y == y);
+            var tile = this.tiles.filter(tile => tile.x == x && tile.y == y);
             if (tile.length > 0) {
-                var terrain = self.getTerrainById(tile[0].t);
-                var ocean = self.getTerrainById(1);
+                var terrain = this.getTerrainById(tile[0].t);
+                var ocean = this.getTerrainById(1);
                 if (terrain.id !== 0 && terrain.baseZIndex > zIndex) {
-                    self.m_context.globalCompositeOperation = "lighten";
-                    self.m_context.drawImage(ocean.overlay[i].element, 0, 0);
+                    this.m_context.globalCompositeOperation = 'lighten';
+                    this.m_context.drawImage(ocean.overlay[i].element, 0, 0);
                 }
             }
         },
 
         prepareShores: function(xIndex, yIndex, zIndex) {
-            var self = this;
-            self.m_context.clearRect(0, 0, self.m_canvas.width, self.m_canvas.height);
-            self.m_context.save();
+            this.m_context.clearRect(0, 0, this.m_canvas.width, this.m_canvas.height);
+            this.m_context.save();
             var isEvenRow = Math.abs(xIndex) %2 == 1;
-            self.drawShore(xIndex, yIndex, zIndex, xIndex, yIndex - 1, 0);
-            self.drawShore(xIndex, yIndex, zIndex, xIndex - 1, isEvenRow ? yIndex : yIndex - 1 , 1);
-            self.drawShore(xIndex, yIndex, zIndex, xIndex + 1, isEvenRow ? yIndex : yIndex - 1, 2);
-            self.drawShore(xIndex, yIndex, zIndex, xIndex - 1, isEvenRow ? yIndex + 1 : yIndex, 3);
-            self.drawShore(xIndex, yIndex, zIndex, xIndex + 1, isEvenRow ? yIndex + 1 : yIndex, 4);
-            self.drawShore(xIndex, yIndex, zIndex, xIndex, yIndex + 1, 5);
-            self.m_context.restore();
+            this.drawShore(xIndex, yIndex, zIndex, xIndex, yIndex - 1, 0);
+            this.drawShore(xIndex, yIndex, zIndex, xIndex - 1, isEvenRow ? yIndex : yIndex - 1 , 1);
+            this.drawShore(xIndex, yIndex, zIndex, xIndex + 1, isEvenRow ? yIndex : yIndex - 1, 2);
+            this.drawShore(xIndex, yIndex, zIndex, xIndex - 1, isEvenRow ? yIndex + 1 : yIndex, 3);
+            this.drawShore(xIndex, yIndex, zIndex, xIndex + 1, isEvenRow ? yIndex + 1 : yIndex, 4);
+            this.drawShore(xIndex, yIndex, zIndex, xIndex, yIndex + 1, 5);
+            this.m_context.restore();
         },
         
         prepareOverlays: function(xIndex, yIndex, zIndex) {
-            var self = this;
-            self.m2_context.clearRect(0, 0, self.m2_canvas.width, self.m2_canvas.height);
-            self.m2_context.save();
-            self.drawOverlays(xIndex, yIndex, zIndex);
-            self.m2_context.globalCompositeOperation = "destination-in";
-            self.m2_context.drawImage(self.m_canvas, 0, 0);
-            self.m2_context.globalCompositeOperation = "multiply";
-            self.m2_context.drawImage(self.m_canvas, 0, 0);
-            self.m2_context.restore();
+            this.m2_context.clearRect(0, 0, this.m2_canvas.width, this.m2_canvas.height);
+            this.m2_context.save();
+            this.drawOverlays(xIndex, yIndex, zIndex);
+            this.m2_context.globalCompositeOperation = 'destination-in';
+            this.m2_context.drawImage(this.m_canvas, 0, 0);
+            this.m2_context.globalCompositeOperation = 'multiply';
+            this.m2_context.drawImage(this.m_canvas, 0, 0);
+            this.m2_context.restore();
         },
 
         drawShores: function(xIndex, yIndex, zIndex) {
-            var self = this;
-            self.prepareShores(xIndex, yIndex, zIndex);
-            self.prepareOverlays(xIndex, yIndex, zIndex);
+            this.prepareShores(xIndex, yIndex, zIndex);
+            this.prepareOverlays(xIndex, yIndex, zIndex);
             var isEvenRow = Math.abs(xIndex) % 2 == 1; // yes, if it's equal to 1, the first row is index 0, not index 1
-            self.context.drawImage(self.m2_canvas, self.getCartesianX(xIndex), self.getCartesianY(yIndex, isEvenRow),
-                self.getTileWidth(), self.getTileHeight());
+            this.context.drawImage(this.m2_canvas, this.getCartesianX(xIndex), this.getCartesianY(yIndex, isEvenRow),
+                this.getTileWidth(), this.getTileHeight());
         },
 
         drawTile: function(xIndex, yIndex) {
-            var self = this;
             var isEvenRow = Math.abs(xIndex) % 2 == 1; // yes, if it's equal to 1, the first row is index 0, not index 1
-            var tile = self.tiles.find(tile => tile.x == xIndex && tile.y == yIndex);
+            var tile = this.tiles.find(tile => tile.x == xIndex && tile.y == yIndex);
             if (tile) {
-                var terrain = self.getTerrainById(tile.t);
-                self.context.drawImage(terrain.images[0].element, self.getCartesianX(xIndex), self.getCartesianY(yIndex, isEvenRow),
-                    self.getTileWidth(), self.getTileHeight());
-                    self.drawShores(xIndex, yIndex, terrain.baseZIndex);
-                    if (tile.f !== null) {
-                        var terrainFeature = terrain.images[tile.f].element;
-                        var startX = self.getCartesianX(xIndex) - (terrainFeature.width - 300) / 2;
-                        var startY = self.getCartesianY(yIndex, isEvenRow) - (terrainFeature.height - 150) / 2;
-                        self.context.drawImage(terrainFeature, startX, startY,
-                            terrainFeature.width, terrainFeature.height);
-                    }
+                var terrain = this.getTerrainById(tile.t);
+                this.context.drawImage(terrain.images[0].element, this.getCartesianX(xIndex), this.getCartesianY(yIndex, isEvenRow),
+                    this.getTileWidth(), this.getTileHeight());
+                this.drawShores(xIndex, yIndex, terrain.baseZIndex);
+                if (tile.f !== null) {
+                    var terrainFeature = terrain.images[tile.f].element;
+                    var startX = this.getCartesianX(xIndex) - (terrainFeature.width * this.scale() - this.getTileWidth()) / 2;
+                    var startY = this.getCartesianY(yIndex, isEvenRow) - (terrainFeature.height * this.scale() - this.getTileHeight()) / 2;
+                    this.context.drawImage(terrainFeature, startX, startY,
+                        terrainFeature.width * this.scale(), terrainFeature.height * this.scale());
+                }
             } else {
-                self.context.drawImage(self.getTerrainById(0).images[0].element, self.getCartesianX(xIndex), self.getCartesianY(yIndex, isEvenRow),
-                    self.getTileWidth(), self.getTileHeight());
+                this.context.drawImage(this.getTerrainById(0).images[0].element, this.getCartesianX(xIndex), this.getCartesianY(yIndex, isEvenRow),
+                    this.getTileWidth(), this.getTileHeight());
             }
         },
 
         render: function() {
-            var self = this;
-            var bounds = self.getBounds();
-            for (var yIndex = bounds.yMin; yIndex < bounds.yMax; yIndex++) {
-                for (var xIndex = Math.abs(bounds.xMin) % 2 == 0 ? bounds.xMin : bounds.xMin + 1; xIndex < bounds.xMax; xIndex += 2) {
-                    self.drawTile(xIndex, yIndex);
+            var bounds = this.getBounds();
+            for (let yIndex = bounds.yMin; yIndex < bounds.yMax; yIndex++) {
+                for (let xIndex = Math.abs(bounds.xMin) % 2 == 0 ? bounds.xMin : bounds.xMin + 1; xIndex < bounds.xMax; xIndex += 2) {
+                    this.drawTile(xIndex, yIndex);
                 }
-                for (var xIndex = Math.abs(bounds.xMin) % 2 == 1 ? bounds.xMin : bounds.xMin + 1; xIndex < bounds.xMax; xIndex += 2) {
-                    self.drawTile(xIndex, yIndex);
+                for (let xIndex = Math.abs(bounds.xMin) % 2 == 1 ? bounds.xMin : bounds.xMin + 1; xIndex < bounds.xMax; xIndex += 2) {
+                    this.drawTile(xIndex, yIndex);
                 }
             }
         },
         
         getCartesianX: function(xIndex) {
-            var self = this;
-            return (.75 * self.getTileWidth() * xIndex) + self.offset.x - (self.getTileWidth() / 2);
+            return (.75 * this.getTileWidth() * xIndex) + this.offset().x - (this.getTileWidth() / 2);
         },
         
         getCartesianY: function(yIndex, evenRow) {
-            var self = this;
-            var yCartesian = (self.getTileHeight() * yIndex) + self.offset.y - (self.getTileHeight() / 2);
-            yCartesian += evenRow ? (self.getTileHeight() / 2) : 0;
+            var yCartesian = (this.getTileHeight() * yIndex) + this.offset().y - (this.getTileHeight() / 2);
+            yCartesian += evenRow ? (this.getTileHeight() / 2) : 0;
             return yCartesian;
         }
-    }
+    };
 
     function MapViewModel(mapData) {
-        var self = this;
-        self.id = mapData.id;
-        self.name = mapData.name;
-        self.canvas;
-        self.context;
-        self.scale = 1;
-        self.activeLayer = 'terrain';
-        self.terrainController;
-        self.roadController;
-        self.riverController;
-        self.labelController;
-        self.landmarkController;
+        this.id = mapData.id;
+        this.name = mapData.name;
+        this.canvas;
+        this.context;
+        sessionStorage.setItem('scale', 1);
+        sessionStorage.setItem('xOffset', 0);
+        sessionStorage.setItem('yOffset', 0);
+        this.activeLayer = 'terrain';
+        this.terrainController;
+        this.roadController;
+        this.riverController;
+        this.labelController;
+        this.landmarkController;
 
-        self.initialize(mapData.tiles, mapData.roads, mapData.rivers, mapData.labels, mapData.landmarks);
+        this.initialize(mapData.tiles, mapData.roads, mapData.rivers, mapData.labels, mapData.landmarks);
     }
 
     MapViewModel.prototype = {
         changeActiveLayer: function(layer) {
-            var self = this;
-            document.getElementById(self.activeLayer + "Layer").classList.remove('active');
-            self.activeLayer = layer;
-            if (self.activeLayer == 'terrain') {
+            document.getElementById(this.activeLayer + 'Layer').classList.remove('active');
+            this.activeLayer = layer;
+            if (this.activeLayer == 'terrain') {
                 document.getElementById('toolbar').style.display = 'block';
             }
             else  {
                 document.getElementById('toolbar').style.display = 'none';
             }
             
-            if (self.activeLayer == 'landmark') {
+            if (this.activeLayer == 'landmark') {
                 document.getElementById('landmarkToolbar').style.display = 'block';
             }
             else  {
                 document.getElementById('landmarkToolbar').style.display = 'none';
             }
-            self.roadController.clearSelectedRoad();
-            self.riverController.clearSelectedRiver();
-            self.labelController.clearSelectedLabel();
-            self.landmarkController.clearSelectedLandmark();
-            self.render();
-            document.getElementById(self.activeLayer + "Layer").classList.add('active');
+            this.roadController.clearSelectedRoad();
+            this.riverController.clearSelectedRiver();
+            this.labelController.clearSelectedLabel();
+            this.landmarkController.clearSelectedLandmark();
+            this.render();
+            document.getElementById(this.activeLayer + 'Layer').classList.add('active');
         },
 
         clearSelected: function() {
-            var self = this;
-            if (self.activeLayer == 'road') {
-                self.roadController.clearSelectedRoad();
-                self.render();
+            if (this.activeLayer == 'road') {
+                this.roadController.clearSelectedRoad();
+                this.render();
             }
-            if (self.activeLayer == 'river') {
-                self.riverController.clearSelectedRiver();
-                self.render();
+            if (this.activeLayer == 'river') {
+                this.riverController.clearSelectedRiver();
+                this.render();
             }
-            if (self.activeLayer == 'label') {
-                self.labelController.clearSelectedLabel();
-                self.render();
+            if (this.activeLayer == 'label') {
+                this.labelController.clearSelectedLabel();
+                this.render();
             }
-            if (self.activeLayer == 'landmark') {
-                self.landmarkController.clearSelectedLabel();
-                self.render();
+            if (this.activeLayer == 'landmark') {
+                this.landmarkController.clearSelectedLabel();
+                this.render();
             }
         },
 
         deleteSelected: function() {
-            var self = this;
-            if (self.activeLayer == 'road') {
-                self.roadController.deleteSelectedRoad();
-                self.mapUpdated();
+            if (this.activeLayer == 'road') {
+                this.roadController.deleteSelectedRoad();
+                this.mapUpdated();
             }
-            if (self.activeLayer == 'river') {
-                self.riverController.deleteSelectedRiver();
-                self.mapUpdated();
+            if (this.activeLayer == 'river') {
+                this.riverController.deleteSelectedRiver();
+                this.mapUpdated();
             }
-            if (self.activeLayer == 'label') {
-                self.labelController.deleteSelectedLabel();
-                self.mapUpdated();
+            if (this.activeLayer == 'label') {
+                this.labelController.deleteSelectedLabel();
+                this.mapUpdated();
             }
-            if (self.activeLayer == 'landmark') {
-                self.landmarkController.deleteSelectedLandmark();
-                self.mapUpdated();
+            if (this.activeLayer == 'landmark') {
+                this.landmarkController.deleteSelectedLandmark();
+                this.mapUpdated();
             }
         },
 
         mouseDownPrimary: function(event) {
-            var self = this;
-            if (self.activeLayer == 'road') {
-                self.roadController.onMouseDown(event, self.mapUpdated.bind(self));
+            if (this.activeLayer == 'road') {
+                this.roadController.onMouseDown(event, this.mapUpdated.bind(this));
             }
-            if (self.activeLayer == 'river') {
-                self.riverController.onMouseDown(event, self.mapUpdated.bind(self));
+            if (this.activeLayer == 'river') {
+                this.riverController.onMouseDown(event, this.mapUpdated.bind(this));
             }
-            if (self.activeLayer == 'label') {
-                self.labelController.onMouseDown(event, self.mapUpdated.bind(self));
+            if (this.activeLayer == 'label') {
+                this.labelController.onMouseDown(event, this.mapUpdated.bind(this));
             }
-            if (self.activeLayer == 'landmark') {
-                self.landmarkController.onMouseDown(event, self.mapUpdated.bind(self));
+            if (this.activeLayer == 'landmark') {
+                this.landmarkController.onMouseDown(event, this.mapUpdated.bind(this));
             }
         },
 
@@ -1373,42 +1235,39 @@ tg = (function() {
         },
 
         mouseMovePrimary: function(event) {
-            var self = this;
-            if (self.activeLayer == 'terrain') {
-                self.terrainController.changeTerrainTile(event, self.mapUpdated.bind(self));
+            if (this.activeLayer == 'terrain') {
+                this.terrainController.changeTerrainTile(event, this.mapUpdated.bind(this));
             }
-            if (self.activeLayer == 'road') {
-                self.roadController.onMouseMove(event, self.render.bind(self));
+            if (this.activeLayer == 'road') {
+                this.roadController.onMouseMove(event, this.render.bind(this));
             }
-            if (self.activeLayer == 'river') {
-                self.riverController.onMouseMove(event, self.render.bind(self));
+            if (this.activeLayer == 'river') {
+                this.riverController.onMouseMove(event, this.render.bind(this));
             }
-            if (self.activeLayer == 'label') {
-                self.labelController.onMouseMove(event, self.render.bind(self));
+            if (this.activeLayer == 'label') {
+                this.labelController.onMouseMove(event, this.render.bind(this));
             }
-            if (self.activeLayer == 'landmark') {
-                self.landmarkController.onMouseMove(event, self.render.bind(self));
+            if (this.activeLayer == 'landmark') {
+                this.landmarkController.onMouseMove(event, this.render.bind(this));
             }
         },
 
         mouseMoveSecondary: function() {
-            var self = this;
-            self.moveView(event.movementX, event.movementY);
+            this.moveView(event.movementX, event.movementY);
         },
 
         mouseUpPrimary: function(event) {
-            var self = this;
-            if (self.activeLayer == 'road') {
-                self.roadController.onMouseUp(event, self.mapUpdated.bind(self));
+            if (this.activeLayer == 'road') {
+                this.roadController.onMouseUp(event, this.mapUpdated.bind(this));
             }
-            if (self.activeLayer == 'river') {
-                self.riverController.onMouseUp(event, self.mapUpdated.bind(self));
+            if (this.activeLayer == 'river') {
+                this.riverController.onMouseUp(event, this.mapUpdated.bind(this));
             }
-            if (self.activeLayer == 'label') {
-                self.labelController.onMouseUp(event, self.mapUpdated.bind(self));
+            if (this.activeLayer == 'label') {
+                this.labelController.onMouseUp(event, this.mapUpdated.bind(this));
             }
-            if (self.activeLayer == 'landmark') {
-                self.landmarkController.onMouseUp(event, self.mapUpdated.bind(self));
+            if (this.activeLayer == 'landmark') {
+                this.landmarkController.onMouseUp(event, this.mapUpdated.bind(this));
             }
         },
 
@@ -1416,77 +1275,56 @@ tg = (function() {
         },
 
         mouseClickPrimary: function(event) {
-            var self = this;
-            if (self.activeLayer == 'terrain') {
-                self.terrainController.changeTerrainTile(event, self.mapUpdated.bind(self));
+            if (this.activeLayer == 'terrain') {
+                this.terrainController.changeTerrainTile(event, this.mapUpdated.bind(this));
             }
         },
 
         mouseClickSecondary: function() {
-            var self = this;
-            if (self.activeLayer == 'road') {
-                self.roadController.onRightClick(event, self.mapUpdated.bind(self));
+            if (this.activeLayer == 'road') {
+                this.roadController.onRightClick(event, this.mapUpdated.bind(this));
             }
-            if (self.activeLayer == 'river') {
-                self.riverController.onRightClick(event, self.mapUpdated.bind(self));
+            if (this.activeLayer == 'river') {
+                this.riverController.onRightClick(event, this.mapUpdated.bind(this));
             }
         },
 
         moveView: function(x, y) {
-            var self = this;
-            self.terrainController.updateOffset(x, y);
-            self.roadController.updateOffset(x, y);
-            self.riverController.updateOffset(x, y);
-            self.labelController.updateOffset(x, y);
-            self.landmarkController.updateOffset(x, y);
-            self.render();
+            sessionStorage.setItem('xOffset', +sessionStorage.getItem('xOffset') + x);
+            sessionStorage.setItem('yOffset', +sessionStorage.getItem('yOffset') + y);
+            this.render();
         },
 
         resizeCanvas: function() {
-            var self = this;
-            self.canvas.width = window.innerWidth;
-            self.canvas.height = window.innerHeight;
-            self.render();
+            this.canvas.width = window.innerWidth;
+            this.canvas.height = window.innerHeight;
+            this.render();
         },
 
         mapUpdated: function() {
-            var self = this;
-            self.render();
-            tg.saveMap({id: self.id, name: self.name, tiles: self.terrainController.getTiles(),
-                roads: self.roadController.getRoads(), rivers: self.riverController.getRivers(),
-                labels: self.labelController.getLabels(), landmarks: self.landmarkController.getLandmarks()});
+            this.render();
+            tg.saveMap({id: this.id, name: this.name, tiles: this.terrainController.getTiles(),
+                roads: this.roadController.getRoads(), rivers: this.riverController.getRivers(),
+                labels: this.labelController.getLabels(), landmarks: this.landmarkController.getLandmarks()});
         },
 
         render: function() {
-            var self = this;
-            self.context.clearRect(0, 0, self.canvas.width, self.canvas.height);
-            self.terrainController.render();
-            self.riverController.render();
-            self.roadController.render();
-            self.labelController.render();
-            self.landmarkController.render();
+            this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            this.terrainController.render();
+            this.riverController.render();
+            this.roadController.render();
+            this.labelController.render();
+            this.landmarkController.render();
         },
 
         zoomIn: function() {
-            var self = this;
-            self.scale = Math.min(self.scale + .05, 1);
-            self.terrainController.setScale(self.scale);
-            self.roadController.setScale(self.scale);
-            self.riverController.setScale(self.scale);
-            self.labelController.setScale(self.scale);
-            self.landmarkController.setScale(self.scale);
-            self.render();
+            sessionStorage.setItem('scale', Math.min(+sessionStorage.getItem('scale') + .05, 1));
+            this.render();
         },
 
         zoomOut: function() {
-            var self = this;
-            self.scale = Math.max(self.scale - .05, .3);
-            self.terrainController.setScale(self.scale);
-            self.roadController.setScale(self.scale);
-            self.riverController.setScale(self.scale);
-            self.labelController.setScale(self.scale);
-            self.landmarkController.setScale(self.scale);
-            self.render();
+            sessionStorage.setItem('scale', Math.max(+sessionStorage.getItem('scale') - .05, .3));
+            this.render();
         },
 
         bindActions: function() {
@@ -1498,32 +1336,32 @@ tg = (function() {
             self.canvas.addEventListener('mouseup', tulpaEvent.mouseUp.bind(tulpaEvent, self.mouseUpPrimary.bind(self), self.mouseUpSecondary.bind(self)), false);
             self.canvas.addEventListener('click', tulpaEvent.mouseClick.bind(tulpaEvent, self.mouseClickPrimary.bind(self)), false);
             self.canvas.addEventListener('contextmenu', tulpaEvent.mouseRightClick.bind(tulpaEvent, self.mouseClickSecondary.bind(self)), false);
-            document.onkeydown = function(event) {
+            document.onkeydown = (event) => {
                 switch (event.keyCode) {
-                    case 27:
-                        self.clearSelected();
-                        break;
-                    case 46:
-                        self.deleteSelected();
-                        break;
-                    case 37:
-                        self.moveView(5, 0);
-                        break;
-                    case 38:
-                        self.moveView(0, 5);
-                        break;
-                    case 39:
-                        self.moveView(-5, 0);
-                        break;
-                    case 40:
-                        self.moveView(0, -5);
-                        break;
-                    case 109:
-                        self.zoomOut();
-                        break;
-                    case 107:
-                        self.zoomIn();
-                        break;
+                case 27:
+                    this.clearSelected();
+                    break;
+                case 46:
+                    this.deleteSelected();
+                    break;
+                case 37:
+                    this.moveView(5, 0);
+                    break;
+                case 38:
+                    this.moveView(0, 5);
+                    break;
+                case 39:
+                    this.moveView(-5, 0);
+                    break;
+                case 40:
+                    this.moveView(0, -5);
+                    break;
+                case 109:
+                    this.zoomOut();
+                    break;
+                case 107:
+                    this.zoomIn();
+                    break;
                 }
             };
         },
@@ -1531,18 +1369,18 @@ tg = (function() {
         initialize: function(tiles, roads, rivers, labels, landmarks) {
             var self = this;
             var tulpagraphyContainer = document.getElementById('tulpagraphy');
-            self.canvas = document.createElement('canvas');
-            tulpagraphyContainer.appendChild(self.canvas);
-            self.context = self.canvas.getContext('2d');
+            this.canvas = document.createElement('canvas');
+            tulpagraphyContainer.appendChild(this.canvas);
+            this.context = this.canvas.getContext('2d');
             var toolbar = document.createElement('div');
             toolbar.setAttribute('id', 'toolbar');
             toolbar.setAttribute('class', 'toolbar');
-            self.terrainController = new TerrainController(tiles, self.canvas, self.context);
-            self.roadController = new RoadController(roads, self.canvas, self.context);
-            self.riverController = new RiverController(rivers, self.canvas, self.context);
-            self.labelController = new LabelController(labels, self.canvas, self.context);
-            self.landmarkController = new LandmarkController(landmarks, self.canvas, self.context);
-            self.terrainController.terrain.forEach(function(item) {
+            this.terrainController = new TerrainController(tiles, this.canvas, this.context);
+            this.roadController = new RoadController(roads, this.canvas, this.context);
+            this.riverController = new RiverController(rivers, this.canvas, this.context);
+            this.labelController = new LabelController(labels, this.canvas, this.context);
+            this.landmarkController = new LandmarkController(landmarks, this.canvas, this.context);
+            this.terrainController.terrain.forEach(function(item) {
                 var tool = document.createElement('img');
                 tool.setAttribute('src', item.imageDirectory + 'tool.png');
                 tool.setAttribute('title', item.name);
@@ -1555,7 +1393,7 @@ tg = (function() {
             var landmarkToolbar = document.createElement('div');
             landmarkToolbar.setAttribute('id', 'landmarkToolbar');
             landmarkToolbar.setAttribute('class', 'toolbar');
-            self.landmarkController.landmarkOptions.forEach(function(item) {
+            this.landmarkController.landmarkOptions.forEach(function(item) {
                 var tool = document.createElement('img');
                 tool.setAttribute('src', item.imagePath);
                 tool.setAttribute('title', item.name);
@@ -1573,30 +1411,30 @@ tg = (function() {
             var text = document.createElement('input');
             text.setAttribute('type', 'text');
             text.setAttribute('id', 'labelText');
-            text.addEventListener('input', self.labelController.updateLabelText.bind(self.labelController, self.mapUpdated.bind(self)));
+            text.addEventListener('input', this.labelController.updateLabelText.bind(this.labelController, this.mapUpdated.bind(this)));
             labelToolbar.appendChild(text);
 
             var fontSize = document.createElement('select');
             fontSize.setAttribute('id', 'fontSize');
-            for (var i = 16; i <=60; i+=4) {
+            for (let i = 16; i <=60; i+=4) {
                 var sizeOption = document.createElement('option');
                 sizeOption.text = i;
                 fontSize.add(sizeOption);
             }
-            fontSize.addEventListener('change', self.labelController.updateFontSize.bind(self.labelController, self.mapUpdated.bind(self)));
+            fontSize.addEventListener('change', this.labelController.updateFontSize.bind(this.labelController, this.mapUpdated.bind(this)));
             labelToolbar.appendChild(fontSize);
             var fonts = document.createElement('select');
             fonts.setAttribute('id', 'fonts');
             var fontNames = [{text: "Arial", value: "Arial"}, {text: "Arial Black", value: "'Arial Black'"}, {text: "Comic Sans MS", value: "'Comic Sans MS'"},
-                             {text: "Courier New", value: "'Courier New'"}, {text: "Helvetica", value: "helvetica"}, {text: "Impact", value: "hoge,impact"}, 
-                             {text: "Times New Roman", value: "'Times New Roman'"}, {text: "Trebuchet MS", value: "'Trebuchet MS'"}, {text: "Verdana", value: "Verdana"}]
-            for (var i = 0; i < fontNames.length; i++) {
+                {text: "Courier New", value: "'Courier New'"}, {text: "Helvetica", value: "helvetica"}, {text: "Impact", value: "hoge,impact"}, 
+                {text: "Times New Roman", value: "'Times New Roman'"}, {text: "Trebuchet MS", value: "'Trebuchet MS'"}, {text: "Verdana", value: "Verdana"}]
+            for (let i = 0; i < fontNames.length; i++) {
                 var fontOption = document.createElement('option');
                 fontOption.value = fontNames[i].value;
                 fontOption.text = fontNames[i].text;
                 fonts.add(fontOption);
             }
-            fonts.addEventListener('change', self.labelController.updateFont.bind(self.labelController, self.mapUpdated.bind(self)));
+            fonts.addEventListener('change', this.labelController.updateFont.bind(this.labelController, this.mapUpdated.bind(this)));
             labelToolbar.appendChild(fonts);
 
             var colorPicker = document.createElement('input');
@@ -1604,128 +1442,118 @@ tg = (function() {
             colorPicker.setAttribute('type', 'color');
             colorPicker.setAttribute('id', 'colorPicker');
             labelToolbar.appendChild(colorPicker);
-            colorPicker.addEventListener('change', self.labelController.updateFontColor.bind(self.labelController, self.mapUpdated.bind(self)));
+            colorPicker.addEventListener('change', this.labelController.updateFontColor.bind(this.labelController, this.mapUpdated.bind(this)));
 
             var boldLabel = document.createElement('b');
-            boldLabel.innerText = "B";
+            boldLabel.innerText = 'B';
             labelToolbar.appendChild(boldLabel);
             var boldCheckbox = document.createElement('input');
             boldCheckbox.setAttribute('type', 'checkbox');
             boldCheckbox.setAttribute('id', 'bold');
             labelToolbar.appendChild(boldCheckbox);
-            boldCheckbox.addEventListener('click', self.labelController.updateBold.bind(self.labelController, self.mapUpdated.bind(self)));
+            boldCheckbox.addEventListener('click', this.labelController.updateBold.bind(this.labelController, this.mapUpdated.bind(this)));
 
             var italicLabel = document.createElement('i');
-            italicLabel.innerText = "I";
+            italicLabel.innerText = 'I';
             labelToolbar.appendChild(italicLabel);
             var italicCheckbox = document.createElement('input');
             italicCheckbox.setAttribute('type', 'checkbox');
             italicCheckbox.setAttribute('id', 'italic');
             labelToolbar.appendChild(italicCheckbox);
-            italicCheckbox.addEventListener('click', self.labelController.updateItalic.bind(self.labelController, self.mapUpdated.bind(self)));
+            italicCheckbox.addEventListener('click', this.labelController.updateItalic.bind(this.labelController, this.mapUpdated.bind(this)));
 
             tulpagraphyContainer.appendChild(labelToolbar);
             document.getElementById('labelToolbar').style.display = 'none';
 
-            self.bindActions();
+            this.bindActions();
 
             document.getElementById('terrainLayer').classList.add('active');
 
-            var loader = setInterval(function() {
-                if (self.terrainController.terrainLoaded()) {
+            var loader = setInterval(() => {
+                if (this.terrainController.terrainLoaded()) {
                     clearInterval(loader);
-                    self.resizeCanvas();
+                    this.resizeCanvas();
                 }
             }, 100);
         }
-    }
+    };
 
     function MapExportViewModel(mapData) {
-        var self = this;
-        self.id = mapData.id;
-        self.name = mapData.name;
-        self.canvas;
-        self.context;
-        self.terrainController;
-        self.roadController;
-        self.riverController;
-        self.labelController;
-        self.landmarkController;
+        this.id = mapData.id;
+        this.name = mapData.name;
+        this.canvas;
+        this.context;
+        this.terrainController;
+        this.roadController;
+        this.riverController;
+        this.labelController;
+        this.landmarkController;
 
-        self.initialize(mapData.tiles, mapData.roads, mapData.rivers, mapData.labels, mapData.landmarks);
+        this.initialize(mapData.tiles, mapData.roads, mapData.rivers, mapData.labels, mapData.landmarks);
     }
 
     MapExportViewModel.prototype = {
         offset: function(x, y) {
-            var self = this;
-            self.terrainController.updateOffset(x, y);
-            self.roadController.updateOffset(x, y);
-            self.riverController.updateOffset(x, y);
-            self.labelController.updateOffset(x, y);
-            self.landmarkController.updateOffset(x, y);
+            sessionStorage.setItem('xOffset', +sessionStorage.getItem('xOffset') + x);
+            sessionStorage.setItem('yOffset', +sessionStorage.getItem('yOffset') + y);
         },
 
         render: function() {
-            var self = this;
-            var terrainArea = self.terrainController.getMappedTerrainArea();
-            self.canvas.width = terrainArea.width;
-            self.canvas.height = terrainArea.height;
-            self.offset(terrainArea.offset.x, terrainArea.offset.y);
-            self.context.clearRect(0, 0, self.canvas.width, self.canvas.height);
-            self.terrainController.render();
-            self.riverController.render();
-            self.roadController.render();
-            self.labelController.render();
-            self.landmarkController.render();
+            var terrainArea = this.terrainController.getMappedTerrainArea();
+            this.canvas.width = terrainArea.width;
+            this.canvas.height = terrainArea.height;
+            this.offset(terrainArea.offset.x, terrainArea.offset.y);
+            this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            this.terrainController.render();
+            this.riverController.render();
+            this.roadController.render();
+            this.labelController.render();
+            this.landmarkController.render();
         },
 
         initialize: function(tiles, roads, rivers, labels, landmarks) {
-            var self = this;
             var tulpagraphyContainer = document.getElementById('tulpagraphy');
-            self.canvas = document.createElement('canvas');
-            tulpagraphyContainer.appendChild(self.canvas);
-            self.context = self.canvas.getContext('2d');
-            self.terrainController = new TerrainController(tiles, self.canvas, self.context);
-            self.roadController = new RoadController(roads, self.canvas, self.context);
-            self.riverController = new RiverController(rivers, self.canvas, self.context);
-            self.labelController = new LabelController(labels, self.canvas, self.context);
-            self.landmarkController = new LandmarkController(landmarks, self.canvas, self.context);
-            var loader = setInterval(function() {
-                if (self.terrainController.terrainLoaded()) {
+            this.canvas = document.createElement('canvas');
+            tulpagraphyContainer.appendChild(this.canvas);
+            this.context = this.canvas.getContext('2d');
+            this.terrainController = new TerrainController(tiles, this.canvas, this.context);
+            this.roadController = new RoadController(roads, this.canvas, this.context);
+            this.riverController = new RiverController(rivers, this.canvas, this.context);
+            this.labelController = new LabelController(labels, this.canvas, this.context);
+            this.landmarkController = new LandmarkController(landmarks, this.canvas, this.context);
+            var loader = setInterval(() => {
+                if (this.terrainController.terrainLoaded()) {
                     clearInterval(loader);
-                    self.render();
+                    this.render();
                 }
             }, 100);
         }
-    }
+    };
 
     function Terrain(id, name, imageDirectory, zIndex, number) {
-        var self = this;
-
-        self.id = id;
-        self.name = name;
-        self.imageDirectory = imageDirectory;
-        self.baseZIndex = zIndex;
-        self.overlay = [new MapImage(imageDirectory + 'n.png'), new MapImage(imageDirectory + 'nw.png'), new MapImage(imageDirectory + 'ne.png'),
-                        new MapImage(imageDirectory + 'sw.png'), new MapImage(imageDirectory + 'se.png'), new MapImage(imageDirectory + 's.png')];
-        self.images = [];
+        this.id = id;
+        this.name = name;
+        this.imageDirectory = imageDirectory;
+        this.baseZIndex = zIndex;
+        this.overlay = [new MapImage(imageDirectory + 'n.png'), new MapImage(imageDirectory + 'nw.png'), new MapImage(imageDirectory + 'ne.png'),
+            new MapImage(imageDirectory + 'sw.png'), new MapImage(imageDirectory + 'se.png'), new MapImage(imageDirectory + 's.png')];
+        this.images = [];
 
         for (var i = 0; i <= number; i++) {
-            self.images.push(new MapImage(imageDirectory + i + '.png'));
+            this.images.push(new MapImage(imageDirectory + i + '.png'));
         }
-    };
+    }
 
     Terrain.prototype = {
         loaded: function() {
-            var self = this;
             let loaded = true;
-            self.images.forEach(function(image) {
+            this.images.forEach(image => {
                 if (!image.loaded) {
                     loaded = false;
                     return;
                 }
             });
-            self.overlay.forEach(function(image) {
+            this.overlay.forEach(image => {
                 if (!image.loaded) {
                     loaded = false;
                     return;
@@ -1736,41 +1564,34 @@ tg = (function() {
     };
 
     function Landmark(id, name, imagePath) {
-        var self = this;
-
-        self.id = id;
-        self.name = name;
-        self.imagePath = imagePath;
-        self.image = new MapImage(imagePath);
+        this.id = id;
+        this.name = name;
+        this.imagePath = imagePath;
+        this.image = new MapImage(imagePath);
     }
 
     Landmark.prototype = {
         loaded: function() {
-            var self = this;
-            return self.image.loaded;
+            return this.image.loaded;
         }
     };
 
     function MapImage(url) {
-        var self = this;
-
-        self.loaded = false;
-        self.element = new Image();
-        self.element.src = url;
-        self.element.addEventListener('load', self.onLoaded.bind(self));
-    };
+        this.loaded = false;
+        this.element = new Image();
+        this.element.src = url;
+        this.element.addEventListener('load', this.onLoaded.bind(this));
+    }
 
     MapImage.prototype = {
         onLoaded: function() {
-            var self = this;
-            self.loaded = true;
+            this.loaded = true;
         }
-    }
+    };
 
     function Tulpagraphy() {
-        var self = this;
-        self.mapViewModel;
-    };
+        this.mapViewModel;
+    }
 
     Tulpagraphy.prototype = {
         initializeMap: function(id) {
